@@ -3,7 +3,7 @@
 import * as db from "./db.js";
 import { mountTimeline } from "./timeline.js";
 import { renderLibrarySettings } from "./library.js";
-import { generateMorningReport, generateEveningReport } from "./report.js";
+import { generateMorningReport, generateEveningReport, generateJournalText } from "./report.js";
 import { renderHistoryList, renderHistoryDetail, formatDateLabel } from "./history.js";
 import { exportData, importFromFile } from "./exportImport.js";
 import { checkReminders, renderReminderBanner } from "./reminder.js";
@@ -159,6 +159,10 @@ for (const [id, key] of JOURNAL_FIELDS) {
     db.saveJournal(currentJournal);
   });
 }
+
+document.getElementById("journal-generate").addEventListener("click", () => {
+  showResult(generateJournalText(currentJournal), "journal");
+});
 
 // ---------- 報告文の生成・コピー ----------
 

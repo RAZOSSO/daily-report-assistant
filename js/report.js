@@ -49,3 +49,26 @@ export function generateEveningReport(record, settings) {
   }
   return parts.join("\n");
 }
+
+function formatJournalDate(dateStr) {
+  const [, m, d] = dateStr.split("-").map(Number);
+  return `${m}月${d}日`;
+}
+
+// 実際にLINEで送っている「1日の振り返りと自己成長ジャーナル」の書式（番号付き1行形式）を崩さずに出力する
+export function generateJournalText(journal) {
+  const lines = [
+    "⭕ 1日の振り返りと自己成長ジャーナル",
+    `1. 日付:${formatJournalDate(journal.date)}`,
+    `2. 今日の主な出来事:${journal.mainEvents || ""}`,
+    `3. 感謝の瞬間:${journal.gratitude || ""}`,
+    `4. 達成したこと:${journal.achievements || ""}`,
+    `5. 学んだこと:${journal.learnings || ""}`,
+    `6. 課題と改善点:${journal.challenges || ""}`,
+    `7. 感じた気づき:${journal.insights || ""}`,
+    `8. 自分に対するポジティブな言葉:${journal.positiveWords || ""}`,
+    `9. 明日への目標:${journal.tomorrowGoal || ""}`,
+    `10. 今日の自分に対する評価 (1-10):${journal.selfScore ?? ""}`,
+  ];
+  return lines.join("\n");
+}
