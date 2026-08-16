@@ -11,7 +11,7 @@ import { checkReminders, renderReminderBanner } from "./reminder.js";
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "9";
+const APP_VERSION = "10";
 
 db.ensureSeed();
 
@@ -37,7 +37,6 @@ function onEnterScreen(name) {
   if (name === "morning") mountMorningTimeline();
   if (name === "evening") mountEveningTimeline();
   if (name === "journal") mountJournalScreen();
-  if (name === "activity") mountActivityScreen();
   if (name === "history") renderHistoryScreen();
   if (name === "history-detail") renderHistoryDetailScreen();
   if (name === "settings") renderSettingsScreen();
@@ -141,6 +140,11 @@ function mountJournalScreen() {
     document.getElementById(id).value = currentJournal[key] || "";
   }
   renderScorePicker();
+
+  currentActivity = db.getActivity(currentDate);
+  for (const [id, key] of ACTIVITY_FIELDS) {
+    document.getElementById(id).value = currentActivity[key] || "";
+  }
 }
 
 function renderScorePicker() {
@@ -168,10 +172,11 @@ for (const [id, key] of JOURNAL_FIELDS) {
 }
 
 document.getElementById("journal-generate").addEventListener("click", () => {
-  showResult(generateJournalText(currentJournal), "journal");
+  const text = generateJournalText(currentJournal) + "\n\n" + generateActivityReport(currentActivity);
+  showResult(text, "journal");
 });
 
-// ---------- AIアクション報告 ----------
+// AIアクション報告の欄は振り返りジャーナルと同じ画面に同居している
 
 const ACTIVITY_FIELDS = [
   ["activity-hours", "hours"],
@@ -180,24 +185,12 @@ const ACTIVITY_FIELDS = [
   ["activity-reflection", "reflection"],
 ];
 
-function mountActivityScreen() {
-  currentDate = db.todayStr();
-  currentActivity = db.getActivity(currentDate);
-  for (const [id, key] of ACTIVITY_FIELDS) {
-    document.getElementById(id).value = currentActivity[key] || "";
-  }
-}
-
 for (const [id, key] of ACTIVITY_FIELDS) {
   document.getElementById(id).addEventListener("input", (e) => {
     currentActivity[key] = e.target.value;
     db.saveActivity(currentActivity);
   });
 }
-
-document.getElementById("activity-generate").addEventListener("click", () => {
-  showResult(generateActivityReport(currentActivity), "activity");
-});
 
 // ---------- 報告文の生成・コピー ----------
 

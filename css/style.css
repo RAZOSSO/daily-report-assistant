@@ -393,6 +393,14 @@ button {
   resize: vertical;
 }
 
+.section-divider {
+  font-size: 14px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  margin: 22px 0 14px;
+}
+
 .score-picker {
   display: flex;
   flex-wrap: wrap;
