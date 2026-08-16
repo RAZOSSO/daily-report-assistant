@@ -13,6 +13,7 @@ db.ensureSeed();
 let settings = db.getSettings();
 let currentDate = db.todayStr();
 let currentRecord = db.getRecord(currentDate);
+let currentJournal = db.getJournal(currentDate);
 let morningTimeline = null;
 let eveningTimeline = null;
 let resultType = null;
@@ -29,6 +30,7 @@ function onEnterScreen(name) {
   if (name === "home") renderHome();
   if (name === "morning") mountMorningTimeline();
   if (name === "evening") mountEveningTimeline();
+  if (name === "journal") mountJournalScreen();
   if (name === "history") renderHistoryScreen();
   if (name === "history-detail") renderHistoryDetailScreen();
   if (name === "settings") renderSettingsScreen();
@@ -111,6 +113,52 @@ document.getElementById("next-action-input").addEventListener("input", (e) => {
   currentRecord.nextAction = e.target.value;
   db.saveRecord(currentRecord);
 });
+
+// ---------- 振り返りジャーナル ----------
+
+const JOURNAL_FIELDS = [
+  ["journal-main-events", "mainEvents"],
+  ["journal-gratitude", "gratitude"],
+  ["journal-achievements", "achievements"],
+  ["journal-learnings", "learnings"],
+  ["journal-challenges", "challenges"],
+  ["journal-insights", "insights"],
+  ["journal-positive-words", "positiveWords"],
+  ["journal-tomorrow-goal", "tomorrowGoal"],
+];
+
+function mountJournalScreen() {
+  currentDate = db.todayStr();
+  currentJournal = db.getJournal(currentDate);
+  for (const [id, key] of JOURNAL_FIELDS) {
+    document.getElementById(id).value = currentJournal[key] || "";
+  }
+  renderScorePicker();
+}
+
+function renderScorePicker() {
+  const host = document.getElementById("journal-score");
+  host.innerHTML = "";
+  for (let n = 1; n <= 10; n++) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "score-btn" + (currentJournal.selfScore === n ? " is-selected" : "");
+    btn.textContent = String(n);
+    btn.addEventListener("click", () => {
+      currentJournal.selfScore = currentJournal.selfScore === n ? null : n;
+      db.saveJournal(currentJournal);
+      renderScorePicker();
+    });
+    host.appendChild(btn);
+  }
+}
+
+for (const [id, key] of JOURNAL_FIELDS) {
+  document.getElementById(id).addEventListener("input", (e) => {
+    currentJournal[key] = e.target.value;
+    db.saveJournal(currentJournal);
+  });
+}
 
 // ---------- 報告文の生成・コピー ----------
 

@@ -62,6 +62,29 @@ export function renderHistoryDetail(container, date) {
     block.innerHTML = `<h3>翌日メモ</h3><p>${escapeHtml(record.nextAction)}</p>`;
     container.appendChild(block);
   }
+
+  const journal = db.getJournal(date);
+  const journalFields = [
+    ["今日の主な出来事", journal.mainEvents],
+    ["感謝の瞬間", journal.gratitude],
+    ["達成したこと", journal.achievements],
+    ["学んだこと", journal.learnings],
+    ["課題と改善点", journal.challenges],
+    ["感じた気づき", journal.insights],
+    ["自分に対するポジティブな言葉", journal.positiveWords],
+    ["明日への目標", journal.tomorrowGoal],
+  ].filter(([, value]) => value?.trim());
+
+  if (journalFields.length || journal.selfScore) {
+    const block = document.createElement("div");
+    block.className = "detail-block";
+    const score = journal.selfScore ? `<p><strong>今日の自己評価：</strong>${journal.selfScore} / 10</p>` : "";
+    const fields = journalFields
+      .map(([label, value]) => `<p><strong>${label}：</strong>${escapeHtml(value)}</p>`)
+      .join("");
+    block.innerHTML = `<h3>振り返りジャーナル</h3>${score}${fields}`;
+    container.appendChild(block);
+  }
 }
 
 function buildEntryBlock(title, entries, withStatus) {

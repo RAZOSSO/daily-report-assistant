@@ -105,10 +105,49 @@ export function listRecordDates() {
   return dates.sort().reverse();
 }
 
+export function emptyJournal(date) {
+  return {
+    date,
+    mainEvents: "",
+    gratitude: "",
+    achievements: "",
+    learnings: "",
+    challenges: "",
+    insights: "",
+    positiveWords: "",
+    tomorrowGoal: "",
+    selfScore: null,
+  };
+}
+
+export function getJournal(date) {
+  const j = readJSON(`journal:${date}`, null);
+  return j ? { ...emptyJournal(date), ...j } : emptyJournal(date);
+}
+
+export function saveJournal(journal) {
+  writeJSON(`journal:${journal.date}`, journal);
+}
+
+export function listJournalDates() {
+  const dates = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(PREFIX + "journal:")) {
+      dates.push(key.slice((PREFIX + "journal:").length));
+    }
+  }
+  return dates.sort().reverse();
+}
+
 export function exportAll() {
   const records = {};
   for (const date of listRecordDates()) {
     records[date] = getRecord(date);
+  }
+  const journals = {};
+  for (const date of listJournalDates()) {
+    journals[date] = getJournal(date);
   }
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -116,6 +155,7 @@ export function exportAll() {
     settings: getSettings(),
     library: getLibrary(),
     records,
+    journals,
   };
 }
 
@@ -127,5 +167,8 @@ export function importAll(data) {
   if (data.library) saveLibrary(data.library);
   for (const [date, record] of Object.entries(data.records)) {
     saveRecord({ ...emptyRecord(date), ...record, date });
+  }
+  for (const [date, journal] of Object.entries(data.journals || {})) {
+    saveJournal({ ...emptyJournal(date), ...journal, date });
   }
 }
