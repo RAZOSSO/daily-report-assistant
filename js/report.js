@@ -72,3 +72,34 @@ export function generateJournalText(journal) {
   ];
   return lines.join("\n");
 }
+
+function toLines(text) {
+  return (text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+// 実際にLINEで送っている「AIアクション報告」の書式を崩さずに出力する
+export function generateActivityReport(activity) {
+  const contentLines = toLines(activity.content);
+  const nextLines = toLines(activity.nextAction);
+  const parts = [
+    "AIアクション報告",
+    "昨日の日報です🌟",
+    "",
+    `活動時間: ${activity.hours || ""}`.trimEnd(),
+    "",
+    "【活動内容】",
+    "〈AI〉",
+    ...(contentLines.length ? contentLines : [""]),
+    "",
+    "【次回の行動】",
+    "〈AI〉",
+    ...(nextLines.length ? nextLines : [""]),
+    "",
+    "【振り返り】",
+    activity.reflection || "",
+  ];
+  return parts.join("\n");
+}

@@ -3,7 +3,7 @@
 import * as db from "./db.js";
 import { mountTimeline } from "./timeline.js";
 import { renderLibrarySettings } from "./library.js";
-import { generateMorningReport, generateEveningReport, generateJournalText } from "./report.js";
+import { generateMorningReport, generateEveningReport, generateJournalText, generateActivityReport } from "./report.js";
 import { renderHistoryList, renderHistoryDetail, formatDateLabel } from "./history.js";
 import { exportData, importFromFile } from "./exportImport.js";
 import { checkReminders, renderReminderBanner } from "./reminder.js";
@@ -11,7 +11,7 @@ import { checkReminders, renderReminderBanner } from "./reminder.js";
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "8";
+const APP_VERSION = "9";
 
 db.ensureSeed();
 
@@ -19,6 +19,7 @@ let settings = db.getSettings();
 let currentDate = db.todayStr();
 let currentRecord = db.getRecord(currentDate);
 let currentJournal = db.getJournal(currentDate);
+let currentActivity = db.getActivity(currentDate);
 let morningTimeline = null;
 let eveningTimeline = null;
 let resultType = null;
@@ -36,6 +37,7 @@ function onEnterScreen(name) {
   if (name === "morning") mountMorningTimeline();
   if (name === "evening") mountEveningTimeline();
   if (name === "journal") mountJournalScreen();
+  if (name === "activity") mountActivityScreen();
   if (name === "history") renderHistoryScreen();
   if (name === "history-detail") renderHistoryDetailScreen();
   if (name === "settings") renderSettingsScreen();
@@ -167,6 +169,34 @@ for (const [id, key] of JOURNAL_FIELDS) {
 
 document.getElementById("journal-generate").addEventListener("click", () => {
   showResult(generateJournalText(currentJournal), "journal");
+});
+
+// ---------- AIアクション報告 ----------
+
+const ACTIVITY_FIELDS = [
+  ["activity-hours", "hours"],
+  ["activity-content", "content"],
+  ["activity-next", "nextAction"],
+  ["activity-reflection", "reflection"],
+];
+
+function mountActivityScreen() {
+  currentDate = db.todayStr();
+  currentActivity = db.getActivity(currentDate);
+  for (const [id, key] of ACTIVITY_FIELDS) {
+    document.getElementById(id).value = currentActivity[key] || "";
+  }
+}
+
+for (const [id, key] of ACTIVITY_FIELDS) {
+  document.getElementById(id).addEventListener("input", (e) => {
+    currentActivity[key] = e.target.value;
+    db.saveActivity(currentActivity);
+  });
+}
+
+document.getElementById("activity-generate").addEventListener("click", () => {
+  showResult(generateActivityReport(currentActivity), "activity");
 });
 
 // ---------- 報告文の生成・コピー ----------
