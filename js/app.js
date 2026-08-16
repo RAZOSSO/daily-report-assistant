@@ -8,6 +8,11 @@ import { renderHistoryList, renderHistoryDetail, formatDateLabel } from "./histo
 import { exportData, importFromFile } from "./exportImport.js";
 import { checkReminders, renderReminderBanner } from "./reminder.js";
 
+// GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
+// 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
+// デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
+const APP_VERSION = "8";
+
 db.ensureSeed();
 
 let settings = db.getSettings();
@@ -296,7 +301,7 @@ document.querySelectorAll("[data-nav]").forEach((btn) => {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    navigator.serviceWorker.register(`./service-worker.js?v=${APP_VERSION}`).catch(() => {});
   });
 }
 
