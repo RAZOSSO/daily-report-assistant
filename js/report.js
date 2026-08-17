@@ -50,34 +50,31 @@ export function generateEveningReport(record, settings) {
   return parts.join("\n");
 }
 
-function formatComparisonContent(entry) {
+function formatComparisonLine(entry, withStatus) {
   const duration = entry.durationMinutes
     ? `（〜${minutesToClock(timeToMinutes(entry.time) + entry.durationMinutes)}）`
     : "";
-  return `${entry.content}${duration}`;
+  let line = `${entry.time}　${entry.content}${duration}`;
+  if (withStatus && entry.status) {
+    line += ` → ${entry.status}`;
+    if (entry.note) line += `。${entry.note}`;
+  }
+  return line;
 }
 
-// 予定と実績を、同じ時刻の行に横並びで書く報告文を作る（LINE送信・コピー用）
+// 画面の「予定と実績を比べる」表示（予定リスト→実績リストの並び）と同じ見た目の報告文を作る
 export function generateComparisonReport(record) {
-  const planMap = new Map(record.morning.filter((e) => e.content).map((e) => [e.time, e]));
-  const actualMap = new Map(record.evening.filter((e) => e.content).map((e) => [e.time, e]));
-  const times = Array.from(new Set([...planMap.keys(), ...actualMap.keys()])).sort();
+  const planEntries = record.morning.filter((e) => e.content).sort((a, b) => (a.time < b.time ? -1 : 1));
+  const actualEntries = record.evening.filter((e) => e.content).sort((a, b) => (a.time < b.time ? -1 : 1));
 
-  if (times.length === 0) return "予定と実績の比較です。\n\n（まだ記録がありません）";
+  const planLines = planEntries.length
+    ? planEntries.map((e) => formatComparisonLine(e, false))
+    : ["（予定はまだ入力されていません）"];
+  const actualLines = actualEntries.length
+    ? actualEntries.map((e) => formatComparisonLine(e, true))
+    : ["（実績はまだ入力されていません）"];
 
-  const lines = times.map((time) => {
-    const plan = planMap.get(time);
-    const actual = actualMap.get(time);
-    const planText = plan ? formatComparisonContent(plan) : "（なし）";
-    let actualText = actual ? formatComparisonContent(actual) : "（なし）";
-    if (actual?.status) {
-      actualText += ` → ${actual.status}`;
-      if (actual.note) actualText += `。${actual.note}`;
-    }
-    return `${time}　予定：${planText}　実績：${actualText}`;
-  });
-
-  return ["予定と実績の比較です。", "", ...lines].join("\n");
+  return ["予定と実績の比較です。", "", "【予定】", ...planLines, "", "【実績】", ...actualLines].join("\n");
 }
 
 function formatJournalDate(dateStr) {
