@@ -31,7 +31,7 @@ function clockToMinutes(t) {
 }
 
 // 所要時間が指定された予定について、それが覆う後続の行時刻 → 起点の時刻、を返す
-export function computeCoverage(entries, settings) {
+function computeCoverage(entries, settings) {
   const filled = entries
     .filter((e) => e.content && e.content.trim())
     .slice()

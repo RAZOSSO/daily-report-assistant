@@ -555,52 +555,54 @@ button {
   font-size: 12.5px;
 }
 
-.compare-row {
-  padding: 10px 0;
+.compare-table {
+  display: grid;
+  grid-template-columns: 44px 1fr 1fr;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.compare-table-head {
+  display: contents;
+}
+.compare-table-head span {
+  padding: 8px 10px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: var(--surface-alt);
   border-bottom: 1px solid var(--border);
 }
-.compare-row:last-child {
-  border-bottom: none;
+.compare-row {
+  display: contents;
+}
+.compare-time,
+.compare-cell {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14.5px;
 }
 .compare-time {
   font-variant-numeric: tabular-nums;
   color: var(--accent);
   font-size: 12.5px;
-  margin-bottom: 6px;
-}
-.compare-cols {
-  display: flex;
-  gap: 8px;
-}
-.compare-col {
-  flex: 1;
-  min-width: 0;
   background: var(--surface-alt);
-  border-radius: 8px;
-  padding: 8px 10px;
+  display: flex;
+  align-items: center;
 }
-.compare-col-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 3px;
-}
-.compare-col-content {
+.compare-cell {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  font-size: 13.5px;
+  min-width: 0;
 }
-.compare-row.is-mismatch .compare-col:last-child {
+.compare-row:last-child .compare-time,
+.compare-row:last-child .compare-cell {
+  border-bottom: none;
+}
+.compare-row.is-mismatch .compare-cell:last-child {
   background: var(--accent-soft);
-  outline: 1px solid var(--status-partial);
-}
-.compare-row.is-blank {
-  opacity: 0.45;
-}
-.compare-col-content .covered-label {
-  color: var(--text-muted);
-  font-size: 12.5px;
 }
 
 /* ---------- 設定 ---------- */
