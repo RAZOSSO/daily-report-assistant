@@ -18,7 +18,7 @@ import { generateJournalWithAI } from "./ai.js";
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "22";
+const APP_VERSION = "23";
 
 db.ensureSeed();
 
@@ -176,15 +176,15 @@ document.getElementById("journal-ai-generate").addEventListener("click", async (
   const btn = document.getElementById("journal-ai-generate");
   const feedback = document.getElementById("journal-ai-feedback");
 
-  if (!settings.openaiApiKey?.trim()) {
-    feedback.textContent = "設定画面でOpenAI APIキーを登録してください。";
+  if (!settings.geminiApiKey?.trim()) {
+    feedback.textContent = "設定画面でGemini APIキーを登録してください。";
     return;
   }
 
   btn.disabled = true;
   feedback.textContent = "AIが生成中…";
   try {
-    const draft = await generateJournalWithAI(currentRecord, settings.openaiApiKey);
+    const draft = await generateJournalWithAI(currentRecord, settings.geminiApiKey);
     for (const [id, key] of JOURNAL_FIELDS) {
       if (draft[key]) {
         currentJournal[key] = draft[key];
@@ -323,7 +323,7 @@ function renderSettingsScreen() {
   document.getElementById("setting-step-minutes").value = String(settings.stepMinutes);
   document.getElementById("setting-reminder-morning").value = settings.reminderMorningTime;
   document.getElementById("setting-reminder-evening").value = settings.reminderEveningTime;
-  document.getElementById("setting-openai-key").value = settings.openaiApiKey || "";
+  document.getElementById("setting-gemini-key").value = settings.geminiApiKey || "";
   renderLibrarySettings(document.getElementById("library-settings"));
 }
 
@@ -340,7 +340,7 @@ function saveSettingsFromForm() {
     stepMinutes: Number(document.getElementById("setting-step-minutes").value),
     reminderMorningTime: document.getElementById("setting-reminder-morning").value || settings.reminderMorningTime,
     reminderEveningTime: document.getElementById("setting-reminder-evening").value || settings.reminderEveningTime,
-    openaiApiKey: document.getElementById("setting-openai-key").value.trim(),
+    geminiApiKey: document.getElementById("setting-gemini-key").value.trim(),
   };
   db.saveSettings(settings);
 }
@@ -351,7 +351,7 @@ function saveSettingsFromForm() {
   "setting-step-minutes",
   "setting-reminder-morning",
   "setting-reminder-evening",
-  "setting-openai-key",
+  "setting-gemini-key",
 ].forEach((id) => document.getElementById(id).addEventListener("change", saveSettingsFromForm));
 
 document.getElementById("export-btn").addEventListener("click", () => exportData());
