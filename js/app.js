@@ -17,7 +17,7 @@ import { checkReminders, renderReminderBanner } from "./reminder.js";
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "19";
+const APP_VERSION = "20";
 
 db.ensureSeed();
 
@@ -157,6 +157,7 @@ const JOURNAL_FIELDS = [
 function mountJournalScreen() {
   currentDate = db.todayStr();
   currentJournal = db.getJournal(currentDate);
+  fillJournalFromRecord(currentJournal, db.getRecord(currentDate));
   for (const [id, key] of JOURNAL_FIELDS) {
     document.getElementById(id).value = currentJournal[key] || "";
   }
@@ -166,6 +167,34 @@ function mountJournalScreen() {
   for (const [id, key] of ACTIVITY_FIELDS) {
     document.getElementById(id).value = currentActivity[key] || "";
   }
+}
+
+// 実績入力の内容を、まだ空欄のジャーナル項目の下書きとして流し込む（既存の入力は上書きしない）
+function fillJournalFromRecord(journal, record) {
+  let changed = false;
+
+  if (!journal.mainEvents?.trim()) {
+    const doneEntries = record.evening
+      .filter((e) => e.content?.trim())
+      .slice()
+      .sort((a, b) => (a.time < b.time ? -1 : 1));
+    if (doneEntries.length) {
+      journal.mainEvents = doneEntries.map((e) => `${e.time}　${e.content}`).join("\n");
+      changed = true;
+    }
+  }
+
+  if (!journal.challenges?.trim() && record.reflection?.trim()) {
+    journal.challenges = record.reflection.trim();
+    changed = true;
+  }
+
+  if (!journal.tomorrowGoal?.trim() && record.nextAction?.trim()) {
+    journal.tomorrowGoal = record.nextAction.trim();
+    changed = true;
+  }
+
+  if (changed) db.saveJournal(journal);
 }
 
 function renderScorePicker() {
