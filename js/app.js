@@ -3,7 +3,13 @@
 import * as db from "./db.js";
 import { mountTimeline } from "./timeline.js";
 import { renderLibrarySettings } from "./library.js";
-import { generateMorningReport, generateEveningReport, generateJournalText, generateActivityReport } from "./report.js";
+import {
+  generateMorningReport,
+  generateEveningReport,
+  generateComparisonReport,
+  generateJournalText,
+  generateActivityReport,
+} from "./report.js";
 import { renderHistoryList, renderHistoryDetail, buildComparisonBlock, formatDateLabel } from "./history.js";
 import { exportData, importFromFile } from "./exportImport.js";
 import { checkReminders, renderReminderBanner } from "./reminder.js";
@@ -11,7 +17,7 @@ import { checkReminders, renderReminderBanner } from "./reminder.js";
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "14";
+const APP_VERSION = "15";
 
 db.ensureSeed();
 
@@ -130,6 +136,10 @@ function mountCompareScreen() {
   host.innerHTML = "";
   host.appendChild(buildComparisonBlock(currentRecord));
 }
+
+document.getElementById("compare-generate").addEventListener("click", () => {
+  showResult(generateComparisonReport(currentRecord, settings), "compare");
+});
 
 // ---------- 振り返りジャーナル ----------
 

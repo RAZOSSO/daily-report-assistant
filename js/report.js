@@ -50,6 +50,31 @@ export function generateEveningReport(record, settings) {
   return parts.join("\n");
 }
 
+// 予定と実績を時刻順に並べて比較できる報告文を作る（LINE送信・コピー用）
+export function generateComparisonReport(record, settings) {
+  const planRanges = computeRanges(record.morning, settings);
+  const actualRanges = computeRanges(record.evening, settings);
+  const planByTime = new Map(planRanges.map((r) => [r.time, r]));
+  const actualByTime = new Map(actualRanges.map((r) => [r.time, r]));
+  const times = Array.from(new Set([...planByTime.keys(), ...actualByTime.keys()])).sort();
+
+  if (times.length === 0) return "本日の予定と実績の比較です。\n\n（まだ記録がありません）";
+
+  const lines = times.map((time) => {
+    const plan = planByTime.get(time);
+    const actual = actualByTime.get(time);
+    const planLabel = plan ? `${plan.startLabel}-${plan.endLabel}　${plan.content}` : `${time}　（予定なし）`;
+    let actualLabel = actual ? actual.content : "（未実施）";
+    if (actual?.status) {
+      actualLabel += ` → ${actual.status}`;
+      if (actual.note) actualLabel += `。${actual.note}`;
+    }
+    return `${planLabel}\n　実績：${actualLabel}`;
+  });
+
+  return ["本日の予定と実績の比較です。", "", ...lines].join("\n");
+}
+
 function formatJournalDate(dateStr) {
   const [, m, d] = dateStr.split("-").map(Number);
   return `${m}月${d}日`;
