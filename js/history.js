@@ -46,8 +46,7 @@ export function renderHistoryDetail(container, date) {
   title.textContent = formatDateLabel(date);
   container.appendChild(title);
 
-  container.appendChild(buildEntryBlock("予定", record.morning, false));
-  container.appendChild(buildEntryBlock("実績", record.evening, true));
+  container.appendChild(buildComparisonBlock(record));
 
   if (record.reflection?.trim()) {
     const block = document.createElement("div");
@@ -87,19 +86,47 @@ export function renderHistoryDetail(container, date) {
   }
 }
 
-function buildEntryBlock(title, entries, withStatus) {
-  const filled = entries.filter((e) => e.content).sort((a, b) => (a.time < b.time ? -1 : 1));
+// 予定（morning）と実績（evening）を時刻ごとに並べて、その場で比較できるブロックを作る。
+// 履歴詳細と「予定と実績」画面（今日）の両方から使われる。
+export function buildComparisonBlock(record) {
+  const planMap = new Map(record.morning.filter((e) => e.content).map((e) => [e.time, e]));
+  const actualMap = new Map(record.evening.filter((e) => e.content).map((e) => [e.time, e]));
+  const times = Array.from(new Set([...planMap.keys(), ...actualMap.keys()])).sort();
+
   const block = document.createElement("div");
-  block.className = "detail-block";
-  const rows = filled
-    .map((e) => {
-      const duration = e.durationMinutes ? `<span class="row-duration">${e.durationMinutes / 60}時間</span>` : "";
-      const status = withStatus && e.status ? `<span class="row-status status-${statusClass(e.status)}">${e.status}</span>` : "";
-      const note = withStatus && e.note ? `<span class="detail-note">${escapeHtml(e.note)}</span>` : "";
-      return `<div class="detail-row"><span class="row-time">${e.time}</span><span class="row-content">${escapeHtml(e.content)}</span>${duration}${status}${note}</div>`;
+  block.className = "detail-block compare-block";
+
+  if (times.length === 0) {
+    block.innerHTML = `<h3>予定と実績</h3><p class="empty-note">記録なし</p>`;
+    return block;
+  }
+
+  const rows = times
+    .map((time) => {
+      const plan = planMap.get(time);
+      const actual = actualMap.get(time);
+      const mismatch = Boolean(plan && actual && plan.content !== actual.content);
+      const planDuration = plan?.durationMinutes ? `<span class="row-duration">${plan.durationMinutes / 60}時間</span>` : "";
+      const actualStatus = actual?.status ? `<span class="row-status status-${statusClass(actual.status)}">${actual.status}</span>` : "";
+      const actualNote = actual?.note ? `<span class="detail-note">${escapeHtml(actual.note)}</span>` : "";
+      return `
+        <div class="compare-row${mismatch ? " is-mismatch" : ""}">
+          <div class="compare-time">${time}</div>
+          <div class="compare-cols">
+            <div class="compare-col">
+              <div class="compare-col-label">予定</div>
+              <div class="compare-col-content">${plan ? escapeHtml(plan.content) : "—"}${planDuration}</div>
+            </div>
+            <div class="compare-col">
+              <div class="compare-col-label">実績</div>
+              <div class="compare-col-content">${actual ? escapeHtml(actual.content) : "—"}${actualStatus}${actualNote}</div>
+            </div>
+          </div>
+        </div>`;
     })
     .join("");
-  block.innerHTML = `<h3>${title}</h3>${rows || `<p class="empty-note">記録なし</p>`}`;
+
+  block.innerHTML = `<h3>予定と実績の比較</h3>${rows}`;
   return block;
 }
 

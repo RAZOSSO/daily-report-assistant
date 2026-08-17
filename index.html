@@ -41,6 +41,7 @@
     <nav class="home-nav">
       <button type="button" class="nav-btn primary" data-nav="morning">予定を入力する</button>
       <button type="button" class="nav-btn primary" data-nav="evening">実績を入力する</button>
+      <button type="button" class="nav-btn" data-nav="compare">予定と実績を比べる</button>
       <button type="button" class="nav-btn" data-nav="journal">振り返りジャーナル</button>
       <button type="button" class="nav-btn" data-nav="history">履歴を見る</button>
       <button type="button" class="nav-btn" data-nav="settings">設定</button>
@@ -77,6 +78,16 @@
     </div>
 
     <button type="button" class="cta-btn" id="evening-generate">報告文を作る</button>
+  </section>
+
+  <!-- 予定と実績の比較（今日） -->
+  <section class="screen" id="screen-compare" data-screen="compare">
+    <header class="screen-header">
+      <button type="button" class="back-btn" data-nav="home">← ホーム</button>
+      <h2>予定と実績</h2>
+    </header>
+    <p class="screen-hint">今日の予定と実績を時刻ごとに並べて確認できます。</p>
+    <div id="compare-host"></div>
   </section>
 
   <!-- 振り返りジャーナル -->

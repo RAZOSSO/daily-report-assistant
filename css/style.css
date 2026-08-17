@@ -65,6 +65,54 @@ button {
   padding: 20px 18px calc(40px + env(safe-area-inset-bottom));
 }
 
+/* ---------- 広い画面（PC・タブレット横向き）向けレイアウト ---------- */
+
+@media (min-width: 700px) {
+  body {
+    background: var(--surface-alt);
+  }
+  .app {
+    max-width: 640px;
+    min-height: auto;
+    margin: 32px auto;
+    padding: 32px 40px 44px;
+    background: var(--bg);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+  }
+  .home-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .home-nav .nav-btn {
+    flex: 1 1 calc(50% - 5px);
+  }
+  .nav-btn,
+  .cta-btn,
+  .back-btn,
+  .lib-btn,
+  .status-btn,
+  .score-btn,
+  .history-row {
+    cursor: pointer;
+  }
+  .nav-btn:hover,
+  .cta-btn:hover,
+  .history-row:hover {
+    filter: brightness(1.04);
+  }
+  /* ボトムシートは指の届く下端に寄せる意味が薄いので、中央のダイアログにする */
+  .sheet-backdrop {
+    align-items: center;
+  }
+  .sheet {
+    max-width: 420px;
+    border-radius: 18px;
+    max-height: 80vh;
+  }
+}
+
 .screen {
   display: none;
 }
@@ -505,6 +553,47 @@ button {
 .detail-note {
   color: var(--text-muted);
   font-size: 12.5px;
+}
+
+.compare-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.compare-row:last-child {
+  border-bottom: none;
+}
+.compare-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  font-size: 12.5px;
+  margin-bottom: 6px;
+}
+.compare-cols {
+  display: flex;
+  gap: 8px;
+}
+.compare-col {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-alt);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.compare-col-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.compare-col-content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 13.5px;
+}
+.compare-row.is-mismatch .compare-col:last-child {
+  background: var(--accent-soft);
+  outline: 1px solid var(--status-partial);
 }
 
 /* ---------- 設定 ---------- */

@@ -4,14 +4,14 @@ import * as db from "./db.js";
 import { mountTimeline } from "./timeline.js";
 import { renderLibrarySettings } from "./library.js";
 import { generateMorningReport, generateEveningReport, generateJournalText, generateActivityReport } from "./report.js";
-import { renderHistoryList, renderHistoryDetail, formatDateLabel } from "./history.js";
+import { renderHistoryList, renderHistoryDetail, buildComparisonBlock, formatDateLabel } from "./history.js";
 import { exportData, importFromFile } from "./exportImport.js";
 import { checkReminders, renderReminderBanner } from "./reminder.js";
 
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "10";
+const APP_VERSION = "11";
 
 db.ensureSeed();
 
@@ -36,6 +36,7 @@ function onEnterScreen(name) {
   if (name === "home") renderHome();
   if (name === "morning") mountMorningTimeline();
   if (name === "evening") mountEveningTimeline();
+  if (name === "compare") mountCompareScreen();
   if (name === "journal") mountJournalScreen();
   if (name === "history") renderHistoryScreen();
   if (name === "history-detail") renderHistoryDetailScreen();
@@ -119,6 +120,16 @@ document.getElementById("next-action-input").addEventListener("input", (e) => {
   currentRecord.nextAction = e.target.value;
   db.saveRecord(currentRecord);
 });
+
+// ---------- 予定と実績の比較（今日） ----------
+
+function mountCompareScreen() {
+  currentDate = db.todayStr();
+  currentRecord = db.getRecord(currentDate);
+  const host = document.getElementById("compare-host");
+  host.innerHTML = "";
+  host.appendChild(buildComparisonBlock(currentRecord));
+}
 
 // ---------- 振り返りジャーナル ----------
 
