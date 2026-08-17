@@ -77,6 +77,44 @@ export function generateComparisonReport(record) {
   return ["予定と実績の比較です。", "", "【予定】", ...planLines, "", "【実績】", ...actualLines].join("\n");
 }
 
+function toSentence(items, prefix, suffix) {
+  if (items.length === 1) return `${prefix}${items[0]}${suffix}`;
+  const last = items[items.length - 1];
+  const rest = items.slice(0, -1).join("、");
+  return `${prefix}${rest}、${last}${suffix}`;
+}
+
+// 実績データから、振り返りジャーナルの下書き文章を作る（項目名 → 文章）
+export function generateJournalDraftFromRecord(record) {
+  const doneEntries = record.evening
+    .filter((e) => e.content && e.content.trim())
+    .slice()
+    .sort((a, b) => (a.time < b.time ? -1 : 1));
+
+  const draft = {};
+
+  if (doneEntries.length) {
+    draft.mainEvents = toSentence(doneEntries.map((e) => e.content), "今日は", "を行いました。");
+  }
+
+  const achieved = doneEntries.filter((e) => e.status === "完了").map((e) => e.content);
+  if (achieved.length) {
+    draft.achievements = toSentence(achieved, "", "を達成できました。");
+  }
+
+  const unfinished = doneEntries.filter((e) => e.status === "未着手" || e.status === "中止").map((e) => e.content);
+  const challengeParts = [];
+  if (unfinished.length) challengeParts.push(toSentence(unfinished, "", "が予定通り進みませんでした。"));
+  if (record.reflection && record.reflection.trim()) challengeParts.push(record.reflection.trim());
+  if (challengeParts.length) draft.challenges = challengeParts.join(" ");
+
+  if (record.nextAction && record.nextAction.trim()) {
+    draft.tomorrowGoal = record.nextAction.trim();
+  }
+
+  return draft;
+}
+
 function formatJournalDate(dateStr) {
   const [, m, d] = dateStr.split("-").map(Number);
   return `${m}月${d}日`;
