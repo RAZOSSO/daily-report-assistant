@@ -86,49 +86,59 @@ export function renderHistoryDetail(container, date) {
   }
 }
 
-// 予定（morning）と実績（evening）を時刻ごとに表形式で並べて比較できるブロックを作る。
-// 内容がある時刻だけを扱い、見出しは表の先頭に1回だけ出す。履歴詳細と「予定と実績」画面
-// （今日）の両方から使われる。
+// 予定（morning）と実績（evening）を、それぞれ独立したパネルとして並べて比較できる
+// ブロックを作る（仮実装）。スマホはタブで切り替え、PC（幅700px以上）は横並びで両方表示。
+// 同じ時刻なのに内容が食い違っている行は色付けして目立たせる。履歴詳細と「予定と実績」
+// 画面（今日）の両方から使われる。
 export function buildComparisonBlock(record) {
-  const planMap = new Map(record.morning.filter((e) => e.content).map((e) => [e.time, e]));
-  const actualMap = new Map(record.evening.filter((e) => e.content).map((e) => [e.time, e]));
-  const times = Array.from(new Set([...planMap.keys(), ...actualMap.keys()])).sort();
+  const planEntries = record.morning.filter((e) => e.content).sort((a, b) => (a.time < b.time ? -1 : 1));
+  const actualEntries = record.evening.filter((e) => e.content).sort((a, b) => (a.time < b.time ? -1 : 1));
+  const planMap = new Map(planEntries.map((e) => [e.time, e]));
+  const actualMap = new Map(actualEntries.map((e) => [e.time, e]));
 
   const block = document.createElement("div");
   block.className = "detail-block compare-block";
 
-  if (times.length === 0) {
+  if (planEntries.length === 0 && actualEntries.length === 0) {
     block.innerHTML = `<h3>予定と実績</h3><p class="empty-note">記録なし</p>`;
     return block;
   }
 
-  const rows = times
-    .map((time) => {
-      const plan = planMap.get(time);
-      const actual = actualMap.get(time);
-      const mismatch = Boolean(plan && actual && plan.content !== actual.content);
-      const planDuration = plan?.durationMinutes ? `<span class="row-duration">${plan.durationMinutes / 60}時間</span>` : "";
-      const actualStatus = actual?.status ? `<span class="row-status status-${statusClass(actual.status)}">${actual.status}</span>` : "";
-      const actualNote = actual?.note ? `<span class="detail-note">${escapeHtml(actual.note)}</span>` : "";
-      return `
-        <div class="compare-row${mismatch ? " is-mismatch" : ""}">
-          <span class="compare-time">${time}</span>
-          <span class="compare-cell">${plan ? escapeHtml(plan.content) : "—"}${planDuration}</span>
-          <span class="compare-cell">${actual ? escapeHtml(actual.content) : "—"}${actualStatus}${actualNote}</span>
-        </div>`;
-    })
-    .join("");
+  function buildPanelRows(entries, counterMap, withStatus) {
+    return (
+      entries
+        .map((e) => {
+          const counter = counterMap.get(e.time);
+          const mismatch = Boolean(counter && counter.content !== e.content);
+          const duration = e.durationMinutes ? `<span class="row-duration">${e.durationMinutes / 60}時間</span>` : "";
+          const status = withStatus && e.status ? `<span class="row-status status-${statusClass(e.status)}">${e.status}</span>` : "";
+          const note = withStatus && e.note ? `<span class="detail-note">${escapeHtml(e.note)}</span>` : "";
+          return `<div class="detail-row${mismatch ? " is-mismatch" : ""}"><span class="row-time">${e.time}</span><span class="row-content">${escapeHtml(e.content)}</span>${duration}${status}${note}</div>`;
+        })
+        .join("") || `<p class="empty-note">記録なし</p>`
+    );
+  }
 
   block.innerHTML = `
     <h3>予定と実績の比較</h3>
-    <div class="compare-table">
-      <div class="compare-table-head">
-        <span></span>
-        <span>予定</span>
-        <span>実績</span>
-      </div>
-      ${rows}
+    <div class="compare-tabs">
+      <button type="button" class="compare-tab is-active" data-panel="plan">予定</button>
+      <button type="button" class="compare-tab" data-panel="actual">実績</button>
+    </div>
+    <div class="compare-columns">
+      <div class="compare-panel is-active" data-panel="plan" data-panel-label="予定">${buildPanelRows(planEntries, actualMap, false)}</div>
+      <div class="compare-panel" data-panel="actual" data-panel-label="実績">${buildPanelRows(actualEntries, planMap, true)}</div>
     </div>`;
+
+  block.querySelectorAll(".compare-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      block.querySelectorAll(".compare-tab").forEach((t) => t.classList.toggle("is-active", t === tab));
+      block
+        .querySelectorAll(".compare-panel")
+        .forEach((p) => p.classList.toggle("is-active", p.dataset.panel === tab.dataset.panel));
+    });
+  });
+
   return block;
 }
 

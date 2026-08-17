@@ -555,54 +555,62 @@ button {
   font-size: 12.5px;
 }
 
-.compare-table {
-  display: grid;
-  grid-template-columns: 44px 1fr 1fr;
+.compare-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.compare-tab {
+  flex: 1;
+  background: var(--surface-alt);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--surface);
-}
-.compare-table-head {
-  display: contents;
-}
-.compare-table-head span {
-  padding: 8px 10px;
-  font-size: 11.5px;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 13.5px;
   color: var(--text-muted);
-  background: var(--surface-alt);
-  border-bottom: 1px solid var(--border);
 }
-.compare-row {
-  display: contents;
+.compare-tab.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
 }
-.compare-time,
-.compare-cell {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-  font-size: 14.5px;
+.compare-columns {
+  display: block;
 }
-.compare-time {
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-  font-size: 12.5px;
-  background: var(--surface-alt);
-  display: flex;
-  align-items: center;
+.compare-panel {
+  display: none;
 }
-.compare-cell {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-width: 0;
+.compare-panel.is-active {
+  display: block;
 }
-.compare-row:last-child .compare-time,
-.compare-row:last-child .compare-cell {
-  border-bottom: none;
-}
-.compare-row.is-mismatch .compare-cell:last-child {
+.detail-row.is-mismatch {
   background: var(--accent-soft);
+  border-radius: 6px;
+  padding-left: 8px;
+  margin: 0 -8px;
+}
+
+@media (min-width: 700px) {
+  .compare-tabs {
+    display: none;
+  }
+  .compare-columns {
+    display: flex;
+    gap: 16px;
+  }
+  .compare-panel {
+    display: block !important;
+    flex: 1;
+    min-width: 0;
+  }
+  .compare-panel::before {
+    content: attr(data-panel-label);
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
 }
 
 /* ---------- 設定 ---------- */
