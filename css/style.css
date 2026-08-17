@@ -386,7 +386,7 @@ button {
   background: var(--accent);
   color: #fff;
 }
-.sheet-content, .sheet-note {
+.sheet-content, .sheet-note, .sheet-end-time {
   width: 100%;
   margin-top: 12px;
   padding: 12px;

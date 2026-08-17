@@ -3,13 +3,6 @@
 import { getSortedLibrary } from "./library.js";
 
 const STATUS_OPTIONS = ["完了", "一部完了", "未着手", "中止"];
-const DURATION_OPTIONS = [
-  { label: "自動", minutes: null },
-  { label: "1時間", minutes: 60 },
-  { label: "2時間", minutes: 120 },
-  { label: "3時間", minutes: 180 },
-  { label: "4時間", minutes: 240 },
-];
 
 export function computeRowTimes(settings) {
   const rows = [];
@@ -25,7 +18,7 @@ export function minutesToClock(mins) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-function clockToMinutes(t) {
+export function clockToMinutes(t) {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
 }
@@ -58,7 +51,7 @@ export function mountTimeline({ host, entries, settings, mode, onChange }) {
   rowsEl.className = "timeline";
   host.appendChild(rowsEl);
 
-  const sheet = buildSheet(mode);
+  const sheet = buildSheet(mode, settings);
   document.body.appendChild(sheet.root);
 
   let activeTime = null;
@@ -108,7 +101,7 @@ export function mountTimeline({ host, entries, settings, mode, onChange }) {
           ? `<span class="row-status status-${statusClass(entry.status)}">${entry.status}</span>`
           : "";
       const durationBadge = entry?.durationMinutes
-        ? `<span class="row-duration">${entry.durationMinutes / 60}時間</span>`
+        ? `<span class="row-duration">〜${minutesToClock(clockToMinutes(entry.time) + entry.durationMinutes)}</span>`
         : "";
       row.innerHTML = `
         <span class="row-time">${time}</span>
@@ -172,7 +165,7 @@ function statusClass(status) {
   return { 完了: "done", 一部完了: "partial", 未着手: "todo", 中止: "cancelled" }[status] || "";
 }
 
-function buildSheet(mode) {
+function buildSheet(mode, settings) {
   const root = document.createElement("div");
   root.className = "sheet-backdrop";
   root.innerHTML = `
@@ -184,8 +177,8 @@ function buildSheet(mode) {
       <div class="sheet-label">予定ライブラリから選ぶ</div>
       <div class="sheet-library"></div>
       <input type="text" class="sheet-content" placeholder="内容を入力（自由入力もできます）" maxlength="60" />
-      <div class="sheet-label">所要時間</div>
-      <div class="sheet-duration"></div>
+      <div class="sheet-label">何時まで</div>
+      <select class="sheet-end-time"></select>
       ${
         mode === "evening"
           ? `<div class="sheet-label">結果</div>
@@ -202,7 +195,7 @@ function buildSheet(mode) {
   const timeEl = root.querySelector(".sheet-time");
   const contentEl = root.querySelector(".sheet-content");
   const libraryEl = root.querySelector(".sheet-library");
-  const durationEl = root.querySelector(".sheet-duration");
+  const endTimeEl = root.querySelector(".sheet-end-time");
   const statusEl = root.querySelector(".sheet-status");
   const noteEl = root.querySelector(".sheet-note");
 
@@ -216,18 +209,7 @@ function buildSheet(mode) {
     });
   });
 
-  let selectedDuration = null;
-  durationEl.innerHTML = DURATION_OPTIONS.map(
-    (d) => `<button type="button" class="status-btn" data-minutes="${d.minutes ?? ""}">${d.label}</button>`
-  ).join("");
-  durationEl.querySelectorAll(".status-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      selectedDuration = btn.dataset.minutes ? Number(btn.dataset.minutes) : null;
-      durationEl
-        .querySelectorAll(".status-btn")
-        .forEach((b) => b.classList.toggle("is-selected", (b.dataset.minutes ? Number(b.dataset.minutes) : null) === selectedDuration));
-    });
-  });
+  let currentStartTime = null;
 
   let selectedStatus = null;
   if (statusEl) {
@@ -258,13 +240,14 @@ function buildSheet(mode) {
       content: contentEl.value,
       status: selectedStatus,
       note: noteEl ? noteEl.value.trim() : "",
-      durationMinutes: selectedDuration,
+      durationMinutes: endTimeEl.value ? clockToMinutes(endTimeEl.value) - clockToMinutes(currentStartTime) : null,
     })
   );
 
   return {
     root,
     open(time, entry) {
+      currentStartTime = time;
       timeEl.textContent = time;
       contentEl.value = entry?.content || "";
       selectedStatus = entry?.status || null;
@@ -273,10 +256,16 @@ function buildSheet(mode) {
           .querySelectorAll(".status-btn")
           .forEach((b) => b.classList.toggle("is-selected", b.dataset.status === selectedStatus));
       }
-      selectedDuration = entry?.durationMinutes || null;
-      durationEl
-        .querySelectorAll(".status-btn")
-        .forEach((b) => b.classList.toggle("is-selected", (b.dataset.minutes ? Number(b.dataset.minutes) : null) === selectedDuration));
+
+      const startMin = clockToMinutes(time);
+      const dayEndLabel = minutesToClock(settings.dayEndHour * 60);
+      const candidates = computeRowTimes(settings).filter((t) => clockToMinutes(t) > startMin);
+      if (candidates[candidates.length - 1] !== dayEndLabel) candidates.push(dayEndLabel);
+      endTimeEl.innerHTML =
+        `<option value="">自動（次の予定まで）</option>` +
+        candidates.map((t) => `<option value="${t}">${t}まで</option>`).join("");
+      endTimeEl.value = entry?.durationMinutes ? minutesToClock(startMin + entry.durationMinutes) : "";
+
       if (noteEl) noteEl.value = entry?.note || "";
       root.classList.add("is-open");
       setTimeout(() => contentEl.focus(), 50);

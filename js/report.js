@@ -51,7 +51,9 @@ export function generateEveningReport(record, settings) {
 }
 
 function formatComparisonLine(entry, withStatus) {
-  const duration = entry.durationMinutes ? `（${entry.durationMinutes / 60}時間）` : "";
+  const duration = entry.durationMinutes
+    ? `（〜${minutesToClock(timeToMinutes(entry.time) + entry.durationMinutes)}）`
+    : "";
   let line = `${entry.time}　${entry.content}${duration}`;
   if (withStatus && entry.status) {
     line += ` → ${entry.status}`;

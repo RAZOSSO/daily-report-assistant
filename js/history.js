@@ -1,6 +1,7 @@
 // 履歴一覧・詳細の描画。
 
 import * as db from "./db.js";
+import { minutesToClock, clockToMinutes } from "./timeline.js";
 
 function escapeHtml(str) {
   return str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -110,7 +111,9 @@ export function buildComparisonBlock(record) {
         .map((e) => {
           const counter = counterMap.get(e.time);
           const mismatch = Boolean(counter && counter.content !== e.content);
-          const duration = e.durationMinutes ? `<span class="row-duration">${e.durationMinutes / 60}時間</span>` : "";
+          const duration = e.durationMinutes
+            ? `<span class="row-duration">〜${minutesToClock(clockToMinutes(e.time) + e.durationMinutes)}</span>`
+            : "";
           const status = withStatus && e.status ? `<span class="row-status status-${statusClass(e.status)}">${e.status}</span>` : "";
           const note = withStatus && e.note ? `<span class="detail-note">${escapeHtml(e.note)}</span>` : "";
           return `<div class="detail-row${mismatch ? " is-mismatch" : ""}"><span class="row-time">${e.time}</span><span class="row-content">${escapeHtml(e.content)}</span>${duration}${status}${note}</div>`;
