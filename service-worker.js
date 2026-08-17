@@ -1,4 +1,4 @@
-const CACHE_NAME = "dra-shell-v23";
+const CACHE_NAME = "dra-shell-v24";
 
 const APP_SHELL = [
   "./",
@@ -34,25 +34,23 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Cache-first for the app shell; same-origin GETs fall back to network and
-// get cached opportunistically. No push/notification handling by design.
+// ネットワーク優先：オンラインなら常に最新を取りに行き、取得できたものをキャッシュに
+// 保存する。オフライン時のみキャッシュ（なければapp shellのindex.html）にフォールバック
+// する。キャッシュ優先だと更新の反映がブラウザ側のタイミング任せで遅れがちなため。
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match("./index.html"));
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./index.html")))
   );
 });

@@ -1,7 +1,9 @@
 // Google Gemini APIを使って、実績データを参考情報にした振り返りジャーナルの下書きを生成する。
 // APIキーはブラウザからGoogleへ直接送られる（自分の端末のみに保存、自前サーバーは経由しない）。
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+// "-latest"エイリアスを使うと、モデルが廃止されるたびにコードを直す必要がなくなる
+// （Googleが自動的に最新のFlashモデルへ切り替える）
+const GEMINI_MODEL = "gemini-flash-latest";
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const JOURNAL_KEYS = [
