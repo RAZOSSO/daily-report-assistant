@@ -430,7 +430,8 @@ button {
   color: var(--text-muted);
   margin-bottom: 6px;
 }
-.field-block textarea {
+.field-block textarea,
+.field-block input {
   width: 100%;
   padding: 12px;
   border: 1px solid var(--border);

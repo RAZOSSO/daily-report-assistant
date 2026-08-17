@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   stepMinutes: 60,
   reminderMorningTime: "08:30",
   reminderEveningTime: "20:00",
+  openaiApiKey: "",
 };
 
 const DEFAULT_LIBRARY = [
@@ -183,10 +184,12 @@ export function exportAll() {
   for (const date of listActivityDates()) {
     activities[date] = getActivity(date);
   }
+  // APIキーはこの端末だけの秘密情報なので、バックアップファイルには含めない
+  const { openaiApiKey, ...settingsWithoutSecrets } = getSettings();
   return {
     schemaVersion: SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
-    settings: getSettings(),
+    settings: settingsWithoutSecrets,
     library: getLibrary(),
     records,
     journals,
@@ -198,7 +201,8 @@ export function importAll(data) {
   if (!data || typeof data !== "object" || !data.records) {
     throw new Error("インポートするファイルの形式が正しくありません。");
   }
-  if (data.settings) saveSettings({ ...DEFAULT_SETTINGS, ...data.settings });
+  // openaiApiKeyはバックアップに含まれないので、インポートで消さずに今の値を保つ
+  if (data.settings) saveSettings({ ...DEFAULT_SETTINGS, openaiApiKey: getSettings().openaiApiKey, ...data.settings });
   if (data.library) saveLibrary(data.library);
   for (const [date, record] of Object.entries(data.records)) {
     saveRecord({ ...emptyRecord(date), ...record, date });

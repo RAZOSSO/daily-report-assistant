@@ -1,4 +1,4 @@
-const CACHE_NAME = "dra-shell-v21";
+const CACHE_NAME = "dra-shell-v22";
 
 const APP_SHELL = [
   "./",
@@ -13,6 +13,7 @@ const APP_SHELL = [
   "./js/history.js",
   "./js/exportImport.js",
   "./js/reminder.js",
+  "./js/ai.js",
   "./icons/icon-180.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

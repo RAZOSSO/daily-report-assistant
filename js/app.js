@@ -7,18 +7,18 @@ import {
   generateMorningReport,
   generateEveningReport,
   generateComparisonReport,
-  generateJournalDraftFromRecord,
   generateJournalText,
   generateActivityReport,
 } from "./report.js";
 import { renderHistoryList, renderHistoryDetail, buildComparisonBlock, formatDateLabel } from "./history.js";
 import { exportData, importFromFile } from "./exportImport.js";
 import { checkReminders, renderReminderBanner } from "./reminder.js";
+import { generateJournalWithAI } from "./ai.js";
 
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "21";
+const APP_VERSION = "22";
 
 db.ensureSeed();
 
@@ -157,8 +157,8 @@ const JOURNAL_FIELDS = [
 
 function mountJournalScreen() {
   currentDate = db.todayStr();
+  currentRecord = db.getRecord(currentDate);
   currentJournal = db.getJournal(currentDate);
-  fillJournalFromRecord(currentJournal, db.getRecord(currentDate));
   for (const [id, key] of JOURNAL_FIELDS) {
     document.getElementById(id).value = currentJournal[key] || "";
   }
@@ -168,20 +168,37 @@ function mountJournalScreen() {
   for (const [id, key] of ACTIVITY_FIELDS) {
     document.getElementById(id).value = currentActivity[key] || "";
   }
+
+  document.getElementById("journal-ai-feedback").textContent = "";
 }
 
-// 実績入力の内容から文章を生成し、まだ空欄のジャーナル項目の下書きとして流し込む（既存の入力は上書きしない）
-function fillJournalFromRecord(journal, record) {
-  const draft = generateJournalDraftFromRecord(record);
-  let changed = false;
-  for (const [key, text] of Object.entries(draft)) {
-    if (!journal[key]?.trim() && text) {
-      journal[key] = text;
-      changed = true;
-    }
+document.getElementById("journal-ai-generate").addEventListener("click", async () => {
+  const btn = document.getElementById("journal-ai-generate");
+  const feedback = document.getElementById("journal-ai-feedback");
+
+  if (!settings.openaiApiKey?.trim()) {
+    feedback.textContent = "設定画面でOpenAI APIキーを登録してください。";
+    return;
   }
-  if (changed) db.saveJournal(journal);
-}
+
+  btn.disabled = true;
+  feedback.textContent = "AIが生成中…";
+  try {
+    const draft = await generateJournalWithAI(currentRecord, settings.openaiApiKey);
+    for (const [id, key] of JOURNAL_FIELDS) {
+      if (draft[key]) {
+        currentJournal[key] = draft[key];
+        document.getElementById(id).value = draft[key];
+      }
+    }
+    db.saveJournal(currentJournal);
+    feedback.textContent = "AIの下書きを反映しました。内容を確認・編集してください。";
+  } catch (err) {
+    feedback.textContent = "生成に失敗しました：" + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 function renderScorePicker() {
   const host = document.getElementById("journal-score");
@@ -306,6 +323,7 @@ function renderSettingsScreen() {
   document.getElementById("setting-step-minutes").value = String(settings.stepMinutes);
   document.getElementById("setting-reminder-morning").value = settings.reminderMorningTime;
   document.getElementById("setting-reminder-evening").value = settings.reminderEveningTime;
+  document.getElementById("setting-openai-key").value = settings.openaiApiKey || "";
   renderLibrarySettings(document.getElementById("library-settings"));
 }
 
@@ -322,13 +340,19 @@ function saveSettingsFromForm() {
     stepMinutes: Number(document.getElementById("setting-step-minutes").value),
     reminderMorningTime: document.getElementById("setting-reminder-morning").value || settings.reminderMorningTime,
     reminderEveningTime: document.getElementById("setting-reminder-evening").value || settings.reminderEveningTime,
+    openaiApiKey: document.getElementById("setting-openai-key").value.trim(),
   };
   db.saveSettings(settings);
 }
 
-["setting-start-hour", "setting-end-hour", "setting-step-minutes", "setting-reminder-morning", "setting-reminder-evening"].forEach(
-  (id) => document.getElementById(id).addEventListener("change", saveSettingsFromForm)
-);
+[
+  "setting-start-hour",
+  "setting-end-hour",
+  "setting-step-minutes",
+  "setting-reminder-morning",
+  "setting-reminder-evening",
+  "setting-openai-key",
+].forEach((id) => document.getElementById(id).addEventListener("change", saveSettingsFromForm));
 
 document.getElementById("export-btn").addEventListener("click", () => exportData());
 
