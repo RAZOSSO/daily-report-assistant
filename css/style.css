@@ -595,6 +595,13 @@ button {
   background: var(--accent-soft);
   outline: 1px solid var(--status-partial);
 }
+.compare-row.is-blank {
+  opacity: 0.45;
+}
+.compare-col-content .covered-label {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
 
 /* ---------- 設定 ---------- */
 

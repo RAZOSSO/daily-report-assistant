@@ -11,7 +11,7 @@ import { checkReminders, renderReminderBanner } from "./reminder.js";
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "11";
+const APP_VERSION = "12";
 
 db.ensureSeed();
 
@@ -128,7 +128,7 @@ function mountCompareScreen() {
   currentRecord = db.getRecord(currentDate);
   const host = document.getElementById("compare-host");
   host.innerHTML = "";
-  host.appendChild(buildComparisonBlock(currentRecord));
+  host.appendChild(buildComparisonBlock(currentRecord, settings));
 }
 
 // ---------- 振り返りジャーナル ----------

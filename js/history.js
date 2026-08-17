@@ -1,6 +1,7 @@
 // 履歴一覧・詳細の描画。
 
 import * as db from "./db.js";
+import { computeRowTimes, computeCoverage } from "./timeline.js";
 
 function escapeHtml(str) {
   return str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -46,7 +47,7 @@ export function renderHistoryDetail(container, date) {
   title.textContent = formatDateLabel(date);
   container.appendChild(title);
 
-  container.appendChild(buildComparisonBlock(record));
+  container.appendChild(buildComparisonBlock(record, db.getSettings()));
 
   if (record.reflection?.trim()) {
     const block = document.createElement("div");
@@ -86,40 +87,46 @@ export function renderHistoryDetail(container, date) {
   }
 }
 
-// 予定（morning）と実績（evening）を時刻ごとに並べて、その場で比較できるブロックを作る。
-// 履歴詳細と「予定と実績」画面（今日）の両方から使われる。
-export function buildComparisonBlock(record) {
+// 予定（morning）と実績（evening）を1日の全時間帯にわたって並べて、その場で比較できる
+// ブロックを作る。空欄の時間帯もそのまま表示する。履歴詳細と「予定と実績」画面（今日）の
+// 両方から使われる。
+export function buildComparisonBlock(record, settings) {
   const planMap = new Map(record.morning.filter((e) => e.content).map((e) => [e.time, e]));
   const actualMap = new Map(record.evening.filter((e) => e.content).map((e) => [e.time, e]));
-  const times = Array.from(new Set([...planMap.keys(), ...actualMap.keys()])).sort();
+  const planCoverage = computeCoverage(record.morning, settings);
+  const actualCoverage = computeCoverage(record.evening, settings);
+  const times = computeRowTimes(settings);
 
   const block = document.createElement("div");
   block.className = "detail-block compare-block";
-
-  if (times.length === 0) {
-    block.innerHTML = `<h3>予定と実績</h3><p class="empty-note">記録なし</p>`;
-    return block;
-  }
 
   const rows = times
     .map((time) => {
       const plan = planMap.get(time);
       const actual = actualMap.get(time);
+      const planCovered = planCoverage.has(time);
+      const actualCovered = actualCoverage.has(time);
       const mismatch = Boolean(plan && actual && plan.content !== actual.content);
+      const isBlank = !plan && !actual && !planCovered && !actualCovered;
+
       const planDuration = plan?.durationMinutes ? `<span class="row-duration">${plan.durationMinutes / 60}時間</span>` : "";
       const actualStatus = actual?.status ? `<span class="row-status status-${statusClass(actual.status)}">${actual.status}</span>` : "";
       const actualNote = actual?.note ? `<span class="detail-note">${escapeHtml(actual.note)}</span>` : "";
+
+      const planContent = planCovered ? `<span class="covered-label">つづき</span>` : plan ? escapeHtml(plan.content) : "—";
+      const actualContent = actualCovered ? `<span class="covered-label">つづき</span>` : actual ? escapeHtml(actual.content) : "—";
+
       return `
-        <div class="compare-row${mismatch ? " is-mismatch" : ""}">
+        <div class="compare-row${mismatch ? " is-mismatch" : ""}${isBlank ? " is-blank" : ""}">
           <div class="compare-time">${time}</div>
           <div class="compare-cols">
             <div class="compare-col">
               <div class="compare-col-label">予定</div>
-              <div class="compare-col-content">${plan ? escapeHtml(plan.content) : "—"}${planDuration}</div>
+              <div class="compare-col-content">${planContent}${planDuration}</div>
             </div>
             <div class="compare-col">
               <div class="compare-col-label">実績</div>
-              <div class="compare-col-content">${actual ? escapeHtml(actual.content) : "—"}${actualStatus}${actualNote}</div>
+              <div class="compare-col-content">${actualContent}${actualStatus}${actualNote}</div>
             </div>
           </div>
         </div>`;
