@@ -1,4 +1,4 @@
-const CACHE_NAME = "dra-shell-v27";
+const CACHE_NAME = "dra-shell-v28";
 
 const APP_SHELL = [
   "./",

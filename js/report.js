@@ -1,6 +1,16 @@
 // 予定／実績データ → 報告文（挨拶・結びなしの箇条書き）への変換。
 
 import { minutesToClock } from "./timeline.js";
+import { todayStr } from "./db.js";
+
+function formatShortDate(dateStr) {
+  const [, m, d] = dateStr.split("-").map(Number);
+  return `${m}月${d}日`;
+}
+
+function dayLabel(dateStr) {
+  return dateStr === todayStr() ? "本日" : formatShortDate(dateStr);
+}
 
 function sortEntries(entries) {
   return entries
@@ -26,13 +36,15 @@ function computeRanges(entries, settings) {
 }
 
 export function generateMorningReport(record, settings) {
+  const label = dayLabel(record.date);
   const ranges = computeRanges(record.morning, settings);
-  if (ranges.length === 0) return "本日の予定です。\n\n（予定はまだ入力されていません）";
+  if (ranges.length === 0) return `${label}の予定です。\n\n（予定はまだ入力されていません）`;
   const lines = ranges.map((r) => `${r.startLabel}-${r.endLabel}　${r.content}`);
-  return ["本日の予定です。", "", ...lines].join("\n");
+  return [`${label}の予定です。`, "", ...lines].join("\n");
 }
 
 export function generateEveningReport(record, settings) {
+  const label = dayLabel(record.date);
   const ranges = computeRanges(record.evening, settings);
   const lines = ranges.map((r) => {
     let line = `${r.startLabel}-${r.endLabel}　${r.content}`;
@@ -43,7 +55,7 @@ export function generateEveningReport(record, settings) {
     return line;
   });
   const body = lines.length ? lines : ["（実績はまだ入力されていません）"];
-  const parts = ["本日の実績です。", "", ...body];
+  const parts = [`${label}の実績です。`, "", ...body];
   if (record.reflection && record.reflection.trim()) {
     parts.push("", `所感：${record.reflection.trim()}`);
   }
@@ -77,16 +89,11 @@ export function generateComparisonReport(record) {
   return ["予定と実績の比較です。", "", "【予定】", ...planLines, "", "【実績】", ...actualLines].join("\n");
 }
 
-function formatJournalDate(dateStr) {
-  const [, m, d] = dateStr.split("-").map(Number);
-  return `${m}月${d}日`;
-}
-
 // 実際にLINEで送っている「1日の振り返りと自己成長ジャーナル」の書式（番号付き1行形式）を崩さずに出力する
 export function generateJournalText(journal) {
   const lines = [
     "⭕ 1日の振り返りと自己成長ジャーナル",
-    `1. 日付:${formatJournalDate(journal.date)}`,
+    `1. 日付:${formatShortDate(journal.date)}`,
     `2. 今日の主な出来事:${journal.mainEvents || ""}`,
     `3. 感謝の瞬間:${journal.gratitude || ""}`,
     `4. 達成したこと:${journal.achievements || ""}`,
