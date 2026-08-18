@@ -13,6 +13,7 @@ export function exportData() {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+  db.markExported();
 }
 
 export function importFromFile(file) {

@@ -705,6 +705,12 @@ button {
   background: var(--surface);
   color: var(--text);
 }
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
 .file-label {
   font-size: 14px;
   color: var(--accent);

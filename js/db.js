@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS = {
   reminderMorningTime: "08:30",
   reminderEveningTime: "20:00",
   geminiApiKey: "",
+  notifyEnabled: false,
 };
 
 const DEFAULT_LIBRARY = [
@@ -56,6 +57,35 @@ export function ensureSeed() {
   if (readJSON("library", null) === null) {
     writeJSON("library", DEFAULT_LIBRARY);
   }
+  if (readJSON("firstUseAt", null) === null) {
+    writeJSON("firstUseAt", new Date().toISOString());
+  }
+}
+
+// ---------- バックアップ状況（設定画面でのリマインド用） ----------
+
+export function getFirstUseAt() {
+  return readJSON("firstUseAt", null);
+}
+
+export function getLastExportAt() {
+  return readJSON("lastExportAt", null);
+}
+
+export function markExported() {
+  writeJSON("lastExportAt", new Date().toISOString());
+}
+
+// ---------- 通知の重複送信を防ぐための、日ごとの送信済みフラグ ----------
+
+export function getNotifiedState(date) {
+  return readJSON(`notified:${date}`, {});
+}
+
+export function markNotified(date, type) {
+  const state = getNotifiedState(date);
+  state[type] = true;
+  writeJSON(`notified:${date}`, state);
 }
 
 export function getSettings() {

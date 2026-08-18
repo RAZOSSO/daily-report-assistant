@@ -12,13 +12,13 @@ import {
 } from "./report.js";
 import { renderHistoryList, renderHistoryDetail, buildComparisonBlock, formatDateLabel } from "./history.js";
 import { exportData, importFromFile } from "./exportImport.js";
-import { checkReminders, renderReminderBanner } from "./reminder.js";
+import { checkReminders, renderReminderBanner, isBackupDue, nowClock } from "./reminder.js";
 import { generateJournalWithAI } from "./ai.js";
 
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "28";
+const APP_VERSION = "29";
 
 db.ensureSeed();
 
@@ -103,7 +103,8 @@ function renderHome() {
     pendingNote.hidden = true;
   }
 
-  const reminderState = checkReminders(settings, currentRecord);
+  const backupDue = isBackupDue(db.getLastExportAt(), db.getFirstUseAt());
+  const reminderState = checkReminders(settings, currentRecord, { backupDue });
   renderReminderBanner(document.getElementById("reminder-banner"), reminderState, (target) => showScreen(target));
 }
 
@@ -387,6 +388,8 @@ function renderSettingsScreen() {
   document.getElementById("setting-step-minutes").value = String(settings.stepMinutes);
   document.getElementById("setting-reminder-morning").value = settings.reminderMorningTime;
   document.getElementById("setting-reminder-evening").value = settings.reminderEveningTime;
+  document.getElementById("setting-notify-enabled").checked = Boolean(settings.notifyEnabled);
+  document.getElementById("notify-permission-note").textContent = "";
   document.getElementById("setting-gemini-key").value = settings.geminiApiKey || "";
   renderLibrarySettings(document.getElementById("library-settings"));
 }
@@ -404,6 +407,7 @@ function saveSettingsFromForm() {
     stepMinutes: Number(document.getElementById("setting-step-minutes").value),
     reminderMorningTime: document.getElementById("setting-reminder-morning").value || settings.reminderMorningTime,
     reminderEveningTime: document.getElementById("setting-reminder-evening").value || settings.reminderEveningTime,
+    notifyEnabled: document.getElementById("setting-notify-enabled").checked,
     geminiApiKey: document.getElementById("setting-gemini-key").value.trim(),
   };
   db.saveSettings(settings);
@@ -417,6 +421,30 @@ function saveSettingsFromForm() {
   "setting-reminder-evening",
   "setting-gemini-key",
 ].forEach((id) => document.getElementById(id).addEventListener("change", saveSettingsFromForm));
+
+document.getElementById("setting-notify-enabled").addEventListener("change", async (e) => {
+  const note = document.getElementById("notify-permission-note");
+  note.textContent = "";
+  if (e.target.checked) {
+    if (!("Notification" in window)) {
+      e.target.checked = false;
+      note.textContent = "この端末・ブラウザは通知に対応していません。";
+      saveSettingsFromForm();
+      return;
+    }
+    let permission = Notification.permission;
+    if (permission === "default") {
+      permission = await Notification.requestPermission();
+    }
+    if (permission !== "granted") {
+      e.target.checked = false;
+      note.textContent = "通知が許可されなかったため、ONにできませんでした。ブラウザやOSの通知設定から許可してください。";
+      saveSettingsFromForm();
+      return;
+    }
+  }
+  saveSettingsFromForm();
+});
 
 document.getElementById("export-btn").addEventListener("click", () => exportData());
 
@@ -462,5 +490,51 @@ if ("serviceWorker" in navigator) {
       .catch(() => {});
   });
 }
+
+// ---------- 通知リマインダー ----------
+// 設定でONの場合、アプリが起動中〜バックグラウンドで少し生きている間に限り、
+// 未入力の予定・実績を端末通知でも知らせる。完全に終了している場合は届かない。
+
+function fireNotification(title, body) {
+  const options = { body, icon: "./icons/icon-192.png", badge: "./icons/icon-192.png" };
+  if (navigator.serviceWorker?.ready) {
+    navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, options)).catch(() => {
+      try {
+        new Notification(title, options);
+      } catch {}
+    });
+  } else {
+    try {
+      new Notification(title, options);
+    } catch {}
+  }
+}
+
+function checkAndNotify() {
+  if (!settings.notifyEnabled) return;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+  const today = db.todayStr();
+  const record = db.getRecord(today);
+  const now = nowClock();
+  const notified = db.getNotifiedState(today);
+  const morningFilled = record.morning.some((e) => e.content?.trim());
+  const eveningFilled = record.evening.some((e) => e.content?.trim());
+
+  if (!morningFilled && now >= settings.reminderMorningTime && !notified.morning) {
+    fireNotification("予定の入力をお忘れなく", "今日の予定がまだ入力されていません。");
+    db.markNotified(today, "morning");
+  }
+  if (!eveningFilled && now >= settings.reminderEveningTime && !notified.evening) {
+    fireNotification("実績の入力をお忘れなく", "今日の実績がまだ入力されていません。");
+    db.markNotified(today, "evening");
+  }
+}
+
+checkAndNotify();
+setInterval(checkAndNotify, 60_000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) checkAndNotify();
+});
 
 showScreen("home");

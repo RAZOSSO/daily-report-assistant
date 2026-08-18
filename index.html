@@ -233,7 +233,13 @@
         <label>朝<input type="time" id="setting-reminder-morning" /></label>
         <label>夜<input type="time" id="setting-reminder-evening" /></label>
       </div>
-      <p class="settings-note">プッシュ通知ではなく、アプリを開いた時にホーム画面へ入力促進の表示を出します。</p>
+      <label class="checkbox-row"><input type="checkbox" id="setting-notify-enabled" /> 端末の通知でもリマインドする</label>
+      <p class="settings-note" id="notify-permission-note" aria-live="polite"></p>
+      <p class="settings-note">
+        基本はアプリを開いた時にホーム画面へ入力促進の表示を出す仕組みです。
+        通知をONにすると、アプリをバックグラウンドで少し開いたままにしている間は端末の通知でも届きますが、
+        完全に終了・再起動している場合は届きません（特にiPhoneでは制約が大きく、届かないことが多いです）。
+      </p>
     </div>
 
     <div class="settings-block">
