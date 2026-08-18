@@ -38,7 +38,7 @@ export function renderHistoryList(container, onSelect) {
   });
 }
 
-export function renderHistoryDetail(container, date) {
+export function renderHistoryDetail(container, date, onGenerate) {
   const record = db.getRecord(date);
   container.innerHTML = "";
 
@@ -48,6 +48,19 @@ export function renderHistoryDetail(container, date) {
   container.appendChild(title);
 
   container.appendChild(buildComparisonBlock(record));
+
+  if (onGenerate) {
+    const scheduleActions = document.createElement("div");
+    scheduleActions.className = "detail-actions";
+    scheduleActions.innerHTML = `
+      <button type="button" data-report="morning">予定の報告文を作る</button>
+      <button type="button" data-report="evening">実績の報告文を作る</button>
+      <button type="button" data-report="compare">比較の報告文を作る</button>`;
+    scheduleActions.querySelectorAll("[data-report]").forEach((btn) => {
+      btn.addEventListener("click", () => onGenerate(btn.dataset.report, date));
+    });
+    container.appendChild(scheduleActions);
+  }
 
   if (record.reflection?.trim()) {
     const block = document.createElement("div");
@@ -84,6 +97,14 @@ export function renderHistoryDetail(container, date) {
       .join("");
     block.innerHTML = `<h3>振り返りジャーナル</h3>${score}${fields}`;
     container.appendChild(block);
+  }
+
+  if (onGenerate && (journalFields.length || journal.selfScore)) {
+    const journalActions = document.createElement("div");
+    journalActions.className = "detail-actions";
+    journalActions.innerHTML = `<button type="button" data-report="journal">ジャーナルの報告文を作る</button>`;
+    journalActions.querySelector("[data-report]").addEventListener("click", () => onGenerate("journal", date));
+    container.appendChild(journalActions);
   }
 }
 

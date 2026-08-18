@@ -41,6 +41,7 @@
     <nav class="home-nav">
       <button type="button" class="nav-btn primary" data-nav="morning">予定を入力する</button>
       <button type="button" class="nav-btn primary" data-nav="evening">実績を入力する</button>
+      <p id="evening-pending-note" class="pending-note" hidden></p>
       <button type="button" class="nav-btn" data-nav="compare">予定と実績を比べる</button>
       <button type="button" class="nav-btn" data-nav="journal">振り返りジャーナル</button>
       <button type="button" class="nav-btn" data-nav="history">履歴を見る</button>
@@ -65,7 +66,12 @@
       <button type="button" class="back-btn" data-nav="home">← ホーム</button>
       <h2>実績入力</h2>
     </header>
-    <p class="screen-hint">朝の予定に結果を記録してください。空いている時刻には予定外の対応も追加できます。</p>
+    <div class="date-switcher">
+      <button type="button" id="evening-date-prev" aria-label="前日">◀</button>
+      <span id="evening-date-label"></span>
+      <button type="button" id="evening-date-next" aria-label="翌日">▶</button>
+    </div>
+    <p class="screen-hint">朝の予定に結果を記録してください。空いている時刻には予定外の対応も追加できます。日をまたいでも、この矢印で前日分を選んで入力できます。</p>
     <div id="evening-timeline-host"></div>
 
     <div class="field-block">

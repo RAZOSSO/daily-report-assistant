@@ -18,7 +18,7 @@ import { generateJournalWithAI } from "./ai.js";
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "24";
+const APP_VERSION = "26";
 
 db.ensureSeed();
 
@@ -31,6 +31,30 @@ let morningTimeline = null;
 let eveningTimeline = null;
 let resultType = null;
 let selectedHistoryDate = null;
+let eveningDate = null;
+
+// 実績入力の対象日を決める。日付が変わっても、日の始まり時刻（設定の予定開始時刻）
+// より前で、かつ前日の実績がまだ未入力なら、前日分を続けて入力できるようにする。
+function defaultEveningDate() {
+  const now = new Date();
+  const today = db.todayStr(now);
+  if (now.getHours() < settings.dayStartHour) {
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = db.todayStr(yesterday);
+    const yesterdayRecord = db.getRecord(yesterdayStr);
+    const yesterdayFilled = yesterdayRecord.evening.some((e) => e.content?.trim());
+    if (!yesterdayFilled) return yesterdayStr;
+  }
+  return today;
+}
+
+function shiftDateStr(dateStr, days) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  return db.todayStr(date);
+}
 
 function showScreen(name) {
   document.querySelectorAll(".screen").forEach((el) => {
@@ -55,6 +79,7 @@ function onEnterScreen(name) {
 function renderHome() {
   currentDate = db.todayStr();
   currentRecord = db.getRecord(currentDate);
+  eveningDate = null; // 実績画面に入るたびに対象日を再判定する
 
   document.getElementById("home-date").textContent = formatDateLabel(currentDate);
 
@@ -68,6 +93,15 @@ function renderHome() {
   const eveningStatus = document.getElementById("status-evening");
   eveningStatus.textContent = eveningFilled ? "入力済み" : "未入力";
   eveningStatus.classList.toggle("is-done", eveningFilled);
+
+  const pendingDate = defaultEveningDate();
+  const pendingNote = document.getElementById("evening-pending-note");
+  if (pendingDate !== currentDate) {
+    pendingNote.textContent = `${formatDateLabel(pendingDate)}の実績が未送信です。`;
+    pendingNote.hidden = false;
+  } else {
+    pendingNote.hidden = true;
+  }
 
   const reminderState = checkReminders(settings, currentRecord);
   renderReminderBanner(document.getElementById("reminder-banner"), reminderState, (target) => showScreen(target));
@@ -92,7 +126,8 @@ function mountMorningTimeline() {
 // ---------- 実績入力（夜） ----------
 
 function mountEveningTimeline() {
-  currentRecord = db.getRecord(currentDate);
+  if (!eveningDate) eveningDate = defaultEveningDate();
+  currentRecord = db.getRecord(eveningDate);
   if (currentRecord.evening.length === 0 && currentRecord.morning.length > 0) {
     currentRecord.evening = currentRecord.morning.map((e) => ({
       time: e.time,
@@ -102,6 +137,9 @@ function mountEveningTimeline() {
     }));
     db.saveRecord(currentRecord);
   }
+
+  document.getElementById("evening-date-label").textContent = formatDateLabel(eveningDate);
+  document.getElementById("evening-date-next").disabled = eveningDate >= db.todayStr();
 
   document.getElementById("reflection-input").value = currentRecord.reflection || "";
   document.getElementById("next-action-input").value = currentRecord.nextAction || "";
@@ -117,6 +155,17 @@ function mountEveningTimeline() {
     onChange: () => db.saveRecord(currentRecord),
   });
 }
+
+document.getElementById("evening-date-prev").addEventListener("click", () => {
+  eveningDate = shiftDateStr(eveningDate, -1);
+  mountEveningTimeline();
+});
+
+document.getElementById("evening-date-next").addEventListener("click", () => {
+  if (eveningDate >= db.todayStr()) return;
+  eveningDate = shiftDateStr(eveningDate, 1);
+  mountEveningTimeline();
+});
 
 document.getElementById("reflection-input").addEventListener("input", (e) => {
   currentRecord.reflection = e.target.value;
@@ -311,7 +360,22 @@ function renderHistoryDetailScreen() {
     showScreen("history");
     return;
   }
-  renderHistoryDetail(document.getElementById("history-detail"), selectedHistoryDate);
+  renderHistoryDetail(document.getElementById("history-detail"), selectedHistoryDate, generateHistoryReport);
+}
+
+function generateHistoryReport(kind, date) {
+  const record = db.getRecord(date);
+  if (kind === "morning") {
+    showResult(generateMorningReport(record, settings), "history-detail");
+  } else if (kind === "evening") {
+    showResult(generateEveningReport(record, settings), "history-detail");
+  } else if (kind === "compare") {
+    showResult(generateComparisonReport(record), "history-detail");
+  } else if (kind === "journal") {
+    const journal = db.getJournal(date);
+    const activity = db.getActivity(date);
+    showResult(generateJournalText(journal) + "\n\n" + generateActivityReport(activity), "history-detail");
+  }
 }
 
 // ---------- 設定 ----------

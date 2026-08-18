@@ -233,6 +233,37 @@ button {
   margin: 0 0 16px;
 }
 
+.pending-note {
+  font-size: 13px;
+  color: var(--accent);
+  margin: -2px 0 0;
+}
+
+.date-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+.date-switcher button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  color: var(--accent);
+  font-size: 14px;
+}
+.date-switcher button:disabled {
+  opacity: 0.35;
+}
+.date-switcher span {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 11em;
+  text-align: center;
+}
+
 /* ---------- 時刻一覧 ---------- */
 
 .timeline {
@@ -590,6 +621,23 @@ button {
   border-radius: 6px;
   padding-left: 8px;
   margin: 0 -8px;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.detail-actions button {
+  flex: 1 1 auto;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 @media (min-width: 700px) {
