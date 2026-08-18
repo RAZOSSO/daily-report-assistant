@@ -103,7 +103,12 @@
       <button type="button" class="back-btn" data-nav="home">← ホーム</button>
       <h2>振り返りジャーナル</h2>
     </header>
-    <p class="screen-hint">1日の終わりに、自分のための振り返りを書き留める欄です（LINE報告とは別の記録です）。</p>
+    <div class="date-switcher">
+      <button type="button" id="journal-date-prev" aria-label="前日">◀</button>
+      <span id="journal-date-label"></span>
+      <button type="button" id="journal-date-next" aria-label="翌日">▶</button>
+    </div>
+    <p class="screen-hint">1日の終わりに、自分のための振り返りを書き留める欄です（LINE報告とは別の記録です）。日をまたいでも、この矢印で前日分を選んで入力できます。</p>
 
     <button type="button" class="cta-btn" id="journal-ai-generate">AIで下書きを生成</button>
     <p class="copy-feedback" id="journal-ai-feedback" aria-live="polite"></p>

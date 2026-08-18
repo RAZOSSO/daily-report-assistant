@@ -18,7 +18,7 @@ import { generateJournalWithAI } from "./ai.js";
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "29";
+const APP_VERSION = "30";
 
 db.ensureSeed();
 
@@ -32,6 +32,7 @@ let eveningTimeline = null;
 let resultType = null;
 let selectedHistoryDate = null;
 let eveningDate = null;
+let journalDate = null;
 
 // 実績入力の対象日を決める。日付が変わっても、日の始まり時刻（設定の予定開始時刻）
 // より前で、かつ前日の実績がまだ未入力なら、前日分を続けて入力できるようにする。
@@ -79,7 +80,8 @@ function onEnterScreen(name) {
 function renderHome() {
   currentDate = db.todayStr();
   currentRecord = db.getRecord(currentDate);
-  eveningDate = null; // 実績画面に入るたびに対象日を再判定する
+  eveningDate = null; // 実績・ジャーナル画面に入るたびに対象日を再判定する
+  journalDate = null;
 
   document.getElementById("home-date").textContent = formatDateLabel(currentDate);
 
@@ -206,21 +208,35 @@ const JOURNAL_FIELDS = [
 ];
 
 function mountJournalScreen() {
-  currentDate = db.todayStr();
-  currentRecord = db.getRecord(currentDate);
-  currentJournal = db.getJournal(currentDate);
+  if (!journalDate) journalDate = defaultEveningDate();
+  currentRecord = db.getRecord(journalDate);
+  currentJournal = db.getJournal(journalDate);
   for (const [id, key] of JOURNAL_FIELDS) {
     document.getElementById(id).value = currentJournal[key] || "";
   }
   renderScorePicker();
 
-  currentActivity = db.getActivity(currentDate);
+  currentActivity = db.getActivity(journalDate);
   for (const [id, key] of ACTIVITY_FIELDS) {
     document.getElementById(id).value = currentActivity[key] || "";
   }
 
+  document.getElementById("journal-date-label").textContent = formatDateLabel(journalDate);
+  document.getElementById("journal-date-next").disabled = journalDate >= db.todayStr();
+
   document.getElementById("journal-ai-feedback").textContent = "";
 }
+
+document.getElementById("journal-date-prev").addEventListener("click", () => {
+  journalDate = shiftDateStr(journalDate, -1);
+  mountJournalScreen();
+});
+
+document.getElementById("journal-date-next").addEventListener("click", () => {
+  if (journalDate >= db.todayStr()) return;
+  journalDate = shiftDateStr(journalDate, 1);
+  mountJournalScreen();
+});
 
 document.getElementById("journal-ai-generate").addEventListener("click", async () => {
   const btn = document.getElementById("journal-ai-generate");
