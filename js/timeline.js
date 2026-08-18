@@ -123,6 +123,18 @@ export function mountTimeline({ host, entries, settings, mode, onChange }) {
     sheet.close();
   }
 
+  // 所要時間が他の行にかぶっている場合、その行に入っていた内容（コピーされた予定など）は
+  // 「つづき」として表示上まとめられるだけでなく、報告文にも二重に出てしまわないよう
+  // データ自体を上書き（削除）する。
+  function overwriteCoveredEntries(time, durationMinutes) {
+    if (!durationMinutes) return;
+    const startMin = clockToMinutes(time);
+    const endMin = startMin + durationMinutes;
+    entries
+      .filter((e) => e.time !== time && clockToMinutes(e.time) > startMin && clockToMinutes(e.time) < endMin)
+      .forEach((e) => removeEntry(e.time));
+  }
+
   sheet.onSave((data) => {
     if (!activeTime) return;
     if (!data.content.trim()) {
@@ -134,6 +146,7 @@ export function mountTimeline({ host, entries, settings, mode, onChange }) {
         note: data.note,
         durationMinutes: data.durationMinutes,
       });
+      overwriteCoveredEntries(activeTime, data.durationMinutes);
     }
     closeSheet();
     renderRows();
