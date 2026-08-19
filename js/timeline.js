@@ -135,19 +135,23 @@ export function mountTimeline({ host, entries, settings, mode, onChange }) {
       .forEach((e) => removeEntry(e.time));
   }
 
-  sheet.onSave((data) => {
-    if (!activeTime) return;
+  function applySheetData(time, data) {
     if (!data.content.trim()) {
-      removeEntry(activeTime);
+      removeEntry(time);
     } else {
-      upsertEntry(activeTime, {
+      upsertEntry(time, {
         content: data.content.trim(),
         status: data.status,
         note: data.note,
         durationMinutes: data.durationMinutes,
       });
-      overwriteCoveredEntries(activeTime, data.durationMinutes);
+      overwriteCoveredEntries(time, data.durationMinutes);
     }
+  }
+
+  sheet.onSave((data) => {
+    if (!activeTime) return;
+    applySheetData(activeTime, data);
     closeSheet();
     renderRows();
     onChange?.(entries);
@@ -161,13 +165,26 @@ export function mountTimeline({ host, entries, settings, mode, onChange }) {
     onChange?.(entries);
   });
 
-  sheet.onCancel(() => closeSheet());
+  // シートを開いたまま他アプリに切り替えたりロック画面になったりした場合に備えて、
+  // 入力中の内容を画面を閉じずにそのまま保存しておく（明示的な保存操作を経ていなくても消えないように）。
+  function persistOpenSheetDraft() {
+    if (!activeTime) return;
+    applySheetData(activeTime, sheet.getDraft());
+    onChange?.(entries);
+  }
+  function handleVisibilityChange() {
+    if (document.hidden) persistOpenSheetDraft();
+  }
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  window.addEventListener("pagehide", persistOpenSheetDraft);
 
   renderRows();
 
   return {
     refresh: renderRows,
     destroy: () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", persistOpenSheetDraft);
       sheet.root.remove();
       rowsEl.remove();
     },
@@ -241,21 +258,24 @@ function buildSheet(mode, settings) {
 
   let saveHandler = () => {};
   let clearHandler = () => {};
-  let cancelHandler = () => {};
 
-  root.querySelector(".sheet-close").addEventListener("click", () => cancelHandler());
-  root.addEventListener("click", (e) => {
-    if (e.target === root) cancelHandler();
-  });
-  root.querySelector(".sheet-clear").addEventListener("click", () => clearHandler());
-  root.querySelector(".sheet-save").addEventListener("click", () =>
-    saveHandler({
+  function collectData() {
+    return {
       content: contentEl.value,
       status: selectedStatus,
       note: noteEl ? noteEl.value.trim() : "",
       durationMinutes: endTimeEl.value ? clockToMinutes(endTimeEl.value) - clockToMinutes(currentStartTime) : null,
-    })
-  );
+    };
+  }
+
+  // ✕ボタンや背景タップで閉じた場合も、入力中の内容を破棄せずそのまま保存する
+  // （「クリア」ボタンだけが、その行の内容を意図的に削除する操作）。
+  root.querySelector(".sheet-close").addEventListener("click", () => saveHandler(collectData()));
+  root.addEventListener("click", (e) => {
+    if (e.target === root) saveHandler(collectData());
+  });
+  root.querySelector(".sheet-clear").addEventListener("click", () => clearHandler());
+  root.querySelector(".sheet-save").addEventListener("click", () => saveHandler(collectData()));
 
   return {
     root,
@@ -286,14 +306,12 @@ function buildSheet(mode, settings) {
     close() {
       root.classList.remove("is-open");
     },
+    getDraft: collectData,
     onSave(fn) {
       saveHandler = fn;
     },
     onClear(fn) {
       clearHandler = fn;
-    },
-    onCancel(fn) {
-      cancelHandler = fn;
     },
   };
 }
