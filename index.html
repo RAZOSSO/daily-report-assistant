@@ -12,6 +12,18 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="日次報告" />
+<script>
+  // CSS適用前にテーマを確定させ、システムと違う色でチラつくのを防ぐ
+  (function () {
+    try {
+      var raw = localStorage.getItem("dra:settings");
+      var theme = raw ? JSON.parse(raw).theme : null;
+      if (theme === "light" || theme === "dark") {
+        document.documentElement.setAttribute("data-theme", theme);
+      }
+    } catch (e) {}
+  })();
+</script>
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -206,6 +218,15 @@
       <button type="button" class="back-btn" data-nav="home">← ホーム</button>
       <h2>設定</h2>
     </header>
+
+    <div class="settings-block">
+      <h3>表示テーマ</h3>
+      <div class="field-row theme-picker">
+        <label><input type="radio" name="theme" value="system" id="theme-system" />システムに従う</label>
+        <label><input type="radio" name="theme" value="light" id="theme-light" />ライト</label>
+        <label><input type="radio" name="theme" value="dark" id="theme-dark" />ダーク</label>
+      </div>
+    </div>
 
     <div class="settings-block">
       <h3>予定ライブラリ</h3>

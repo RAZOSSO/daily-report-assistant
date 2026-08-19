@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS = {
   reminderEveningTime: "20:00",
   geminiApiKey: "",
   notifyEnabled: false,
+  theme: "system",
 };
 
 const DEFAULT_LIBRARY = [

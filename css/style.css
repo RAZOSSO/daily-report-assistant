@@ -16,7 +16,8 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  /* 設定で「ライト」を明示的に選んでいる場合は、端末がダークでもライトのままにする */
+  :root:not([data-theme="light"]) {
     --bg: #12161a;
     --surface: #1a2024;
     --surface-alt: #212930;
@@ -32,6 +33,24 @@
     --status-todo: #98a2ac;
     --status-cancelled: #e08268;
   }
+}
+
+/* 設定で「ダーク」を明示的に選んでいる場合は、端末がライトでもダークにする */
+:root[data-theme="dark"] {
+  --bg: #12161a;
+  --surface: #1a2024;
+  --surface-alt: #212930;
+  --text: #e7eaec;
+  --text-muted: #98a2ac;
+  --border: #2b333b;
+  --accent: #5fbdb6;
+  --accent-strong: #86d1cb;
+  --accent-soft: #1e3a38;
+  --danger: #e08268;
+  --status-done: #5fbdb6;
+  --status-partial: #e0ac68;
+  --status-todo: #98a2ac;
+  --status-cancelled: #e08268;
 }
 
 * {

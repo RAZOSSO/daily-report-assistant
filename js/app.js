@@ -18,11 +18,25 @@ import { generateJournalWithAI } from "./ai.js";
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "31";
+const APP_VERSION = "32";
 
 db.ensureSeed();
 
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "light" || theme === "dark") {
+    root.setAttribute("data-theme", theme);
+  } else {
+    root.removeAttribute("data-theme");
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  const isDark = theme === "dark" || (theme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  meta.setAttribute("content", isDark ? "#12161a" : "#1f6f6b");
+}
+
 let settings = db.getSettings();
+applyTheme(settings.theme);
 let currentDate = db.todayStr();
 let currentRecord = db.getRecord(currentDate);
 let currentJournal = db.getJournal(currentDate);
@@ -399,6 +413,8 @@ function generateHistoryReport(kind, date) {
 
 function renderSettingsScreen() {
   settings = db.getSettings();
+  const themeInput = document.getElementById(`theme-${settings.theme}`) || document.getElementById("theme-system");
+  themeInput.checked = true;
   document.getElementById("setting-start-hour").value = settings.dayStartHour;
   document.getElementById("setting-end-hour").value = settings.dayEndHour;
   document.getElementById("setting-step-minutes").value = String(settings.stepMinutes);
@@ -424,6 +440,7 @@ function saveSettingsFromForm() {
     reminderMorningTime: document.getElementById("setting-reminder-morning").value || settings.reminderMorningTime,
     reminderEveningTime: document.getElementById("setting-reminder-evening").value || settings.reminderEveningTime,
     notifyEnabled: document.getElementById("setting-notify-enabled").checked,
+    theme: document.querySelector('input[name="theme"]:checked')?.value || settings.theme,
     geminiApiKey: document.getElementById("setting-gemini-key").value.trim(),
   };
   db.saveSettings(settings);
@@ -437,6 +454,13 @@ function saveSettingsFromForm() {
   "setting-reminder-evening",
   "setting-gemini-key",
 ].forEach((id) => document.getElementById(id).addEventListener("change", saveSettingsFromForm));
+
+document.querySelectorAll('input[name="theme"]').forEach((radio) => {
+  radio.addEventListener("change", () => {
+    saveSettingsFromForm();
+    applyTheme(settings.theme);
+  });
+});
 
 document.getElementById("setting-notify-enabled").addEventListener("change", async (e) => {
   const note = document.getElementById("notify-permission-note");
