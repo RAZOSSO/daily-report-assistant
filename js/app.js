@@ -18,7 +18,7 @@ import { generateJournalWithAI } from "./ai.js";
 // GitHub PagesはService WorkerファイルをCDNで10分キャッシュするため、
 // 登録URLにバージョンを付けて更新のたびに別ファイル扱いにし、キャッシュを回避する。
 // デプロイのたびに、この値とservice-worker.jsのCACHE_NAMEを一緒に上げること。
-const APP_VERSION = "34";
+const APP_VERSION = "35";
 
 db.ensureSeed();
 
@@ -435,7 +435,7 @@ function clampInt(value, min, max, fallback) {
 function saveSettingsFromForm() {
   settings = {
     dayStartHour: clampInt(document.getElementById("setting-start-hour").value, 0, 23, settings.dayStartHour),
-    dayEndHour: clampInt(document.getElementById("setting-end-hour").value, 1, 24, settings.dayEndHour),
+    dayEndHour: clampInt(document.getElementById("setting-end-hour").value, 1, 30, settings.dayEndHour),
     stepMinutes: Number(document.getElementById("setting-step-minutes").value),
     reminderMorningTime: document.getElementById("setting-reminder-morning").value || settings.reminderMorningTime,
     reminderEveningTime: document.getElementById("setting-reminder-evening").value || settings.reminderEveningTime,

@@ -208,8 +208,10 @@ function buildSheet(mode, settings) {
       <div class="sheet-library"></div>
       <input type="text" class="sheet-content" placeholder="内容を入力（自由入力もできます）" maxlength="60" />
       <div class="sheet-label">何時まで</div>
-      <input type="time" class="sheet-end-time" />
-      <p class="sheet-hint">空欄のままなら次の予定まで自動で続きます。</p>
+      <input type="text" inputmode="numeric" class="sheet-end-time" placeholder="21:30" maxlength="5" />
+      <p class="sheet-hint">
+        空欄のままなら次の予定まで自動で続きます。24時を超える翌日の時刻は「25:30」のように入力できます。
+      </p>
       ${
         mode === "evening"
           ? `<div class="sheet-label">結果</div>
@@ -262,7 +264,9 @@ function buildSheet(mode, settings) {
 
   function collectData() {
     const startMin = clockToMinutes(currentStartTime);
-    const endMin = endTimeEl.value ? clockToMinutes(endTimeEl.value) : null;
+    const dayEndMin = settings.dayEndHour * 60;
+    const rawEndMin = endTimeEl.value.trim() ? clockToMinutes(endTimeEl.value.trim()) : null;
+    const endMin = rawEndMin !== null && !Number.isNaN(rawEndMin) ? Math.min(rawEndMin, dayEndMin) : null;
     return {
       content: contentEl.value,
       status: selectedStatus,
@@ -294,9 +298,6 @@ function buildSheet(mode, settings) {
       }
 
       const startMin = clockToMinutes(time);
-      const dayEndMin = settings.dayEndHour * 60;
-      endTimeEl.min = minutesToClock(startMin + 1);
-      endTimeEl.max = dayEndMin >= 1440 ? "23:59" : minutesToClock(dayEndMin);
       endTimeEl.value = entry?.durationMinutes ? minutesToClock(startMin + entry.durationMinutes) : "";
 
       if (noteEl) noteEl.value = entry?.note || "";
