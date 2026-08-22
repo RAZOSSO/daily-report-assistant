@@ -1,7 +1,7 @@
 // 履歴一覧・詳細の描画。
 
 import * as db from "./db.js";
-import { minutesToClock, clockToMinutes } from "./timeline.js";
+import { minutesToClock, clockToMinutes, mountTimeline } from "./timeline.js";
 
 function escapeHtml(str) {
   return str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -15,6 +15,7 @@ export function formatDateLabel(dateStr) {
 }
 
 export function renderHistoryList(container, onSelect) {
+  destroyEditTimelines();
   const dates = db.listRecordDates();
   container.innerHTML = "";
 
@@ -38,74 +39,182 @@ export function renderHistoryList(container, onSelect) {
   });
 }
 
-export function renderHistoryDetail(container, date, onGenerate) {
+// 編集モードで開いたタイムラインは、画面外（document.body）にシートを追加するため、
+// 履歴詳細を離れる・再描画する際は必ずdestroy()して後始末する。
+let activeEditTimelines = [];
+function destroyEditTimelines() {
+  activeEditTimelines.forEach((t) => t.destroy());
+  activeEditTimelines = [];
+}
+
+export function renderHistoryDetail(container, date, onGenerate, settings) {
+  destroyEditTimelines();
   const record = db.getRecord(date);
   container.innerHTML = "";
+  let editing = false;
 
   const title = document.createElement("h2");
   title.className = "detail-title";
   title.textContent = formatDateLabel(date);
   container.appendChild(title);
 
-  container.appendChild(buildComparisonBlock(record));
+  const editToggleRow = document.createElement("div");
+  editToggleRow.className = "detail-actions";
+  const editToggleBtn = document.createElement("button");
+  editToggleBtn.type = "button";
+  editToggleBtn.textContent = "この日の内容を編集する";
+  editToggleRow.appendChild(editToggleBtn);
+  container.appendChild(editToggleRow);
 
-  if (onGenerate) {
-    const scheduleActions = document.createElement("div");
-    scheduleActions.className = "detail-actions";
-    scheduleActions.innerHTML = `
-      <button type="button" data-report="morning">予定の報告文を作る</button>
-      <button type="button" data-report="evening">実績の報告文を作る</button>
-      <button type="button" data-report="compare">比較の報告文を作る</button>`;
-    scheduleActions.querySelectorAll("[data-report]").forEach((btn) => {
-      btn.addEventListener("click", () => onGenerate(btn.dataset.report, date));
+  const editHost = document.createElement("div");
+  container.appendChild(editHost);
+
+  const viewHost = document.createElement("div");
+  container.appendChild(viewHost);
+
+  function renderView() {
+    viewHost.innerHTML = "";
+    viewHost.appendChild(buildComparisonBlock(record));
+
+    if (onGenerate) {
+      const scheduleActions = document.createElement("div");
+      scheduleActions.className = "detail-actions";
+      scheduleActions.innerHTML = `
+        <button type="button" data-report="morning">予定の報告文を作る</button>
+        <button type="button" data-report="evening">実績の報告文を作る</button>
+        <button type="button" data-report="compare">比較の報告文を作る</button>`;
+      scheduleActions.querySelectorAll("[data-report]").forEach((btn) => {
+        btn.addEventListener("click", () => onGenerate(btn.dataset.report, date));
+      });
+      viewHost.appendChild(scheduleActions);
+    }
+
+    if (record.reflection?.trim()) {
+      const block = document.createElement("div");
+      block.className = "detail-block";
+      block.innerHTML = `<h3>所感</h3><p>${escapeHtml(record.reflection)}</p>`;
+      viewHost.appendChild(block);
+    }
+
+    if (record.nextAction?.trim()) {
+      const block = document.createElement("div");
+      block.className = "detail-block";
+      block.innerHTML = `<h3>翌日メモ</h3><p>${escapeHtml(record.nextAction)}</p>`;
+      viewHost.appendChild(block);
+    }
+
+    const journal = db.getJournal(date);
+    const journalFields = [
+      ["今日の主な出来事", journal.mainEvents],
+      ["感謝の瞬間", journal.gratitude],
+      ["達成したこと", journal.achievements],
+      ["学んだこと", journal.learnings],
+      ["課題と改善点", journal.challenges],
+      ["感じた気づき", journal.insights],
+      ["自分に対するポジティブな言葉", journal.positiveWords],
+      ["明日への目標", journal.tomorrowGoal],
+    ].filter(([, value]) => value?.trim());
+
+    if (journalFields.length || journal.selfScore) {
+      const block = document.createElement("div");
+      block.className = "detail-block";
+      const score = journal.selfScore ? `<p><strong>今日の自己評価：</strong>${journal.selfScore} / 10</p>` : "";
+      const fields = journalFields
+        .map(([label, value]) => `<p><strong>${label}：</strong>${escapeHtml(value)}</p>`)
+        .join("");
+      block.innerHTML = `<h3>振り返りジャーナル</h3>${score}${fields}`;
+      viewHost.appendChild(block);
+    }
+
+    if (onGenerate && (journalFields.length || journal.selfScore)) {
+      const journalActions = document.createElement("div");
+      journalActions.className = "detail-actions";
+      journalActions.innerHTML = `<button type="button" data-report="journal">ジャーナルの報告文を作る</button>`;
+      journalActions.querySelector("[data-report]").addEventListener("click", () => onGenerate("journal", date));
+      viewHost.appendChild(journalActions);
+    }
+  }
+
+  function renderEdit() {
+    destroyEditTimelines();
+    editHost.innerHTML = "";
+    if (!editing) return;
+
+    const morningBlock = document.createElement("div");
+    morningBlock.className = "detail-block";
+    morningBlock.innerHTML = `<h3>予定を編集</h3><p class="screen-hint">時刻をタップして内容を修正できます。</p>`;
+    const morningHost = document.createElement("div");
+    morningBlock.appendChild(morningHost);
+    editHost.appendChild(morningBlock);
+    activeEditTimelines.push(
+      mountTimeline({
+        host: morningHost,
+        entries: record.morning,
+        settings,
+        mode: "morning",
+        onChange: () => {
+          db.saveRecord(record);
+          renderView();
+        },
+      })
+    );
+
+    const eveningBlock = document.createElement("div");
+    eveningBlock.className = "detail-block";
+    eveningBlock.innerHTML = `<h3>実績を編集</h3><p class="screen-hint">時刻をタップして内容を修正できます。</p>`;
+    const eveningHost = document.createElement("div");
+    eveningBlock.appendChild(eveningHost);
+    editHost.appendChild(eveningBlock);
+    activeEditTimelines.push(
+      mountTimeline({
+        host: eveningHost,
+        entries: record.evening,
+        settings,
+        mode: "evening",
+        onChange: () => {
+          db.saveRecord(record);
+          renderView();
+        },
+      })
+    );
+
+    const fieldsBlock = document.createElement("div");
+    fieldsBlock.className = "detail-block";
+    fieldsBlock.innerHTML = `
+      <h3>所感・翌日メモを編集</h3>
+      <div class="field-block">
+        <label for="history-reflection">所感・気づき・課題</label>
+        <textarea id="history-reflection" rows="3"></textarea>
+      </div>
+      <div class="field-block">
+        <label for="history-next-action">翌日メモ（任意）</label>
+        <textarea id="history-next-action" rows="2"></textarea>
+      </div>`;
+    editHost.appendChild(fieldsBlock);
+
+    const reflectionEl = fieldsBlock.querySelector("#history-reflection");
+    reflectionEl.value = record.reflection || "";
+    reflectionEl.addEventListener("input", () => {
+      record.reflection = reflectionEl.value;
+      db.saveRecord(record);
     });
-    container.appendChild(scheduleActions);
+
+    const nextActionEl = fieldsBlock.querySelector("#history-next-action");
+    nextActionEl.value = record.nextAction || "";
+    nextActionEl.addEventListener("input", () => {
+      record.nextAction = nextActionEl.value;
+      db.saveRecord(record);
+    });
   }
 
-  if (record.reflection?.trim()) {
-    const block = document.createElement("div");
-    block.className = "detail-block";
-    block.innerHTML = `<h3>所感</h3><p>${escapeHtml(record.reflection)}</p>`;
-    container.appendChild(block);
-  }
+  editToggleBtn.addEventListener("click", () => {
+    editing = !editing;
+    editToggleBtn.textContent = editing ? "編集を終了する" : "この日の内容を編集する";
+    renderEdit();
+    renderView();
+  });
 
-  if (record.nextAction?.trim()) {
-    const block = document.createElement("div");
-    block.className = "detail-block";
-    block.innerHTML = `<h3>翌日メモ</h3><p>${escapeHtml(record.nextAction)}</p>`;
-    container.appendChild(block);
-  }
-
-  const journal = db.getJournal(date);
-  const journalFields = [
-    ["今日の主な出来事", journal.mainEvents],
-    ["感謝の瞬間", journal.gratitude],
-    ["達成したこと", journal.achievements],
-    ["学んだこと", journal.learnings],
-    ["課題と改善点", journal.challenges],
-    ["感じた気づき", journal.insights],
-    ["自分に対するポジティブな言葉", journal.positiveWords],
-    ["明日への目標", journal.tomorrowGoal],
-  ].filter(([, value]) => value?.trim());
-
-  if (journalFields.length || journal.selfScore) {
-    const block = document.createElement("div");
-    block.className = "detail-block";
-    const score = journal.selfScore ? `<p><strong>今日の自己評価：</strong>${journal.selfScore} / 10</p>` : "";
-    const fields = journalFields
-      .map(([label, value]) => `<p><strong>${label}：</strong>${escapeHtml(value)}</p>`)
-      .join("");
-    block.innerHTML = `<h3>振り返りジャーナル</h3>${score}${fields}`;
-    container.appendChild(block);
-  }
-
-  if (onGenerate && (journalFields.length || journal.selfScore)) {
-    const journalActions = document.createElement("div");
-    journalActions.className = "detail-actions";
-    journalActions.innerHTML = `<button type="button" data-report="journal">ジャーナルの報告文を作る</button>`;
-    journalActions.querySelector("[data-report]").addEventListener("click", () => onGenerate("journal", date));
-    container.appendChild(journalActions);
-  }
+  renderView();
 }
 
 // 予定（morning）と実績（evening）を、それぞれ独立したパネルとして並べて比較できる
