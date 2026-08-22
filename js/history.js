@@ -50,6 +50,7 @@ function destroyEditTimelines() {
 export function renderHistoryDetail(container, date, onGenerate, settings) {
   destroyEditTimelines();
   const record = db.getRecord(date);
+  const journal = db.getJournal(date);
   container.innerHTML = "";
   let editing = false;
 
@@ -103,7 +104,6 @@ export function renderHistoryDetail(container, date, onGenerate, settings) {
       viewHost.appendChild(block);
     }
 
-    const journal = db.getJournal(date);
     const journalFields = [
       ["今日の主な出来事", journal.mainEvents],
       ["感謝の瞬間", journal.gratitude],
@@ -205,6 +205,86 @@ export function renderHistoryDetail(container, date, onGenerate, settings) {
       record.nextAction = nextActionEl.value;
       db.saveRecord(record);
     });
+
+    const journalBlock = document.createElement("div");
+    journalBlock.className = "detail-block";
+    journalBlock.innerHTML = `
+      <h3>振り返りジャーナルを編集</h3>
+      <div class="field-block">
+        <label for="history-journal-main-events">今日の主な出来事</label>
+        <textarea id="history-journal-main-events" rows="3"></textarea>
+      </div>
+      <div class="field-block">
+        <label for="history-journal-gratitude">感謝の瞬間</label>
+        <textarea id="history-journal-gratitude" rows="2"></textarea>
+      </div>
+      <div class="field-block">
+        <label for="history-journal-achievements">達成したこと</label>
+        <textarea id="history-journal-achievements" rows="2"></textarea>
+      </div>
+      <div class="field-block">
+        <label for="history-journal-learnings">学んだこと</label>
+        <textarea id="history-journal-learnings" rows="2"></textarea>
+      </div>
+      <div class="field-block">
+        <label for="history-journal-challenges">課題と改善点</label>
+        <textarea id="history-journal-challenges" rows="2"></textarea>
+      </div>
+      <div class="field-block">
+        <label for="history-journal-insights">感じた気づき</label>
+        <textarea id="history-journal-insights" rows="2"></textarea>
+      </div>
+      <div class="field-block">
+        <label for="history-journal-positive-words">自分に対するポジティブな言葉</label>
+        <textarea id="history-journal-positive-words" rows="2"></textarea>
+      </div>
+      <div class="field-block">
+        <label for="history-journal-tomorrow-goal">明日への目標</label>
+        <textarea id="history-journal-tomorrow-goal" rows="2"></textarea>
+      </div>
+      <div class="field-block">
+        <label>今日の自分に対する評価（1〜10）</label>
+        <div class="score-picker" id="history-journal-score"></div>
+      </div>`;
+    editHost.appendChild(journalBlock);
+
+    const journalFieldMap = [
+      ["history-journal-main-events", "mainEvents"],
+      ["history-journal-gratitude", "gratitude"],
+      ["history-journal-achievements", "achievements"],
+      ["history-journal-learnings", "learnings"],
+      ["history-journal-challenges", "challenges"],
+      ["history-journal-insights", "insights"],
+      ["history-journal-positive-words", "positiveWords"],
+      ["history-journal-tomorrow-goal", "tomorrowGoal"],
+    ];
+    for (const [id, key] of journalFieldMap) {
+      const el = journalBlock.querySelector(`#${id}`);
+      el.value = journal[key] || "";
+      el.addEventListener("input", () => {
+        journal[key] = el.value;
+        db.saveJournal(journal);
+      });
+    }
+
+    function renderScorePicker() {
+      const scoreHost = journalBlock.querySelector("#history-journal-score");
+      scoreHost.innerHTML = "";
+      for (let n = 1; n <= 10; n++) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "score-btn" + (journal.selfScore === n ? " is-selected" : "");
+        btn.textContent = String(n);
+        btn.addEventListener("click", () => {
+          journal.selfScore = journal.selfScore === n ? null : n;
+          db.saveJournal(journal);
+          renderScorePicker();
+          renderView();
+        });
+        scoreHost.appendChild(btn);
+      }
+    }
+    renderScorePicker();
   }
 
   editToggleBtn.addEventListener("click", () => {
