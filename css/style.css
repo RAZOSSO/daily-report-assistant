@@ -446,6 +446,11 @@ button {
   color: var(--text);
   font-size: 15px;
 }
+.sheet-hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
 .sheet-actions {
   display: flex;
   gap: 10px;

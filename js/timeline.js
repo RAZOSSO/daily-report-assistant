@@ -208,7 +208,8 @@ function buildSheet(mode, settings) {
       <div class="sheet-library"></div>
       <input type="text" class="sheet-content" placeholder="内容を入力（自由入力もできます）" maxlength="60" />
       <div class="sheet-label">何時まで</div>
-      <select class="sheet-end-time"></select>
+      <input type="time" class="sheet-end-time" />
+      <p class="sheet-hint">空欄のままなら次の予定まで自動で続きます。</p>
       ${
         mode === "evening"
           ? `<div class="sheet-label">結果</div>
@@ -260,11 +261,13 @@ function buildSheet(mode, settings) {
   let clearHandler = () => {};
 
   function collectData() {
+    const startMin = clockToMinutes(currentStartTime);
+    const endMin = endTimeEl.value ? clockToMinutes(endTimeEl.value) : null;
     return {
       content: contentEl.value,
       status: selectedStatus,
       note: noteEl ? noteEl.value.trim() : "",
-      durationMinutes: endTimeEl.value ? clockToMinutes(endTimeEl.value) - clockToMinutes(currentStartTime) : null,
+      durationMinutes: endMin !== null && endMin > startMin ? endMin - startMin : null,
     };
   }
 
@@ -291,12 +294,9 @@ function buildSheet(mode, settings) {
       }
 
       const startMin = clockToMinutes(time);
-      const dayEndLabel = minutesToClock(settings.dayEndHour * 60);
-      const candidates = computeRowTimes(settings).filter((t) => clockToMinutes(t) > startMin);
-      if (candidates[candidates.length - 1] !== dayEndLabel) candidates.push(dayEndLabel);
-      endTimeEl.innerHTML =
-        `<option value="">自動（次の予定まで）</option>` +
-        candidates.map((t) => `<option value="${t}">${t}まで</option>`).join("");
+      const dayEndMin = settings.dayEndHour * 60;
+      endTimeEl.min = minutesToClock(startMin + 1);
+      endTimeEl.max = dayEndMin >= 1440 ? "23:59" : minutesToClock(dayEndMin);
       endTimeEl.value = entry?.durationMinutes ? minutesToClock(startMin + entry.durationMinutes) : "";
 
       if (noteEl) noteEl.value = entry?.note || "";
